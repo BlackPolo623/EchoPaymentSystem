@@ -11,9 +11,9 @@ const CONFIG = {
         HashIV: "tpYEKUQ8D57JyDo0",
         PaymentApiUrl: "https://payment-stage.funpoint.com.tw/Cashier/AioCheckOut/V5",
         // 請更換為實際網站網址
-        ReturnURL: "https://bahalin2.com/funpoint_payment_notify.php",
-        ClientBackURL: "https://bahalin2.com/index.html",
-        OrderResultURL: "https://bahalin2.com/payment_result.php"
+        ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com//funpoint_payment_notify.php",
+        ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com//index.html",
+        OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com//payment_result.php"
     },
     // SmilePay設定
     smilepay: {
