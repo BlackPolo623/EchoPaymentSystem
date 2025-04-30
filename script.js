@@ -198,15 +198,84 @@ function processFunpointPayment(account, amount) {
     const form = document.getElementById('funpoint-payment-form');
     form.action = CONFIG.funpoint.PaymentApiUrl;
     
-    for (const key in params) {
-        if (form.elements[key]) {
-            form.elements[key].value = params[key];
+    // 顯示實際送出的參數和網址 - 除錯用
+    console.log("付款 API 網址:", CONFIG.funpoint.PaymentApiUrl);
+    console.log("送出的參數:", params);
+
+    // 建立一個顯示視窗來顯示表單資料
+    let debugInfo = document.createElement('div');
+    debugInfo.style.position = 'fixed';
+    debugInfo.style.top = '20px';
+    debugInfo.style.left = '20px';
+    debugInfo.style.padding = '20px';
+    debugInfo.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+    debugInfo.style.border = '1px solid #ccc';
+    debugInfo.style.borderRadius = '5px';
+    debugInfo.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+    debugInfo.style.zIndex = '10000';
+    debugInfo.style.maxHeight = '80vh';
+    debugInfo.style.overflow = 'auto';
+    debugInfo.style.fontFamily = 'monospace';
+
+    // 製作關閉按鈕
+    let closeButton = document.createElement('button');
+    closeButton.textContent = '關閉';
+    closeButton.style.marginBottom = '10px';
+    closeButton.onclick = function() {
+        document.body.removeChild(debugInfo);
+    };
+    debugInfo.appendChild(closeButton);
+
+    // 顯示付款 API 網址
+    let urlInfo = document.createElement('div');
+    urlInfo.innerHTML = `<strong>付款 API 網址:</strong><br>${CONFIG.funpoint.PaymentApiUrl}`;
+    urlInfo.style.marginBottom = '10px';
+    debugInfo.appendChild(urlInfo);
+
+    // 顯示參數內容
+    let paramsInfo = document.createElement('div');
+    paramsInfo.innerHTML = `<strong>送出的參數:</strong><pre>${JSON.stringify(params, null, 2)}</pre>`;
+    debugInfo.appendChild(paramsInfo);
+
+    // 顯示完整的 POST 請求 URL（如果表單是 GET 方法的情況下）
+    let queryString = Object.keys(params)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+        .join('&');
+
+    let fullUrl = `${CONFIG.funpoint.PaymentApiUrl}?${queryString}`;
+
+    let fullUrlInfo = document.createElement('div');
+    fullUrlInfo.innerHTML = `<strong>完整 URL (僅供參考，實際是 POST 請求):</strong><br><textarea rows="5" cols="50" readonly style="width:100%">${fullUrl}</textarea>`;
+    fullUrlInfo.style.marginTop = '10px';
+    debugInfo.appendChild(fullUrlInfo);
+
+    // 添加繼續提交按鈕
+    let submitButton = document.createElement('button');
+    submitButton.textContent = '繼續提交表單';
+    submitButton.style.marginTop = '10px';
+    submitButton.onclick = function() {
+        document.body.removeChild(debugInfo);
+        // 實際提交表單
+        for (const key in params) {
+            if (form.elements[key]) {
+                form.elements[key].value = params[key];
+            }
         }
-    }
-    
-    // 提交表單
-    form.submit();
+        form.submit();
+    };
+    debugInfo.appendChild(submitButton);
+
+    // 添加到頁面
+    document.body.appendChild(debugInfo);
+
+    // 停止表單自動提交
+    return false; // 阻止原始函數執行提交
 }
+
+// 修改調用代碼 - 如果原本是在按鈕點擊事件中調用 processFunpointPayment，需要修改為：
+// document.getElementById('yourButtonId').onclick = function() {
+//    return processFunpointPayment('用戶帳號', 1000);
+// };
 
 function get_money() {
     let amount = parseInt(document.getElementById("amount").value);
