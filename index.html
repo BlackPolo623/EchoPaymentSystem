@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="霸權天堂II 線上遊戲自動贊助系統">
+    <title>霸權天堂II 自動贊助</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 預載入背景圖片 -->
+    <link rel="preload" href="background.png" as="image">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha512-E8QSvWZ0eCLGk4km3hxSsNmGWbLtSCSUcewDQPQWZF6pEU8GlT8a5fF32wOl1i8ftdMhssTrF/OhyGWwonTcXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+<div class="form-container">
+    <h2><span class="title-text">霸權天堂II 自動贊助</span></h2>
+    
+    <label for="account" class="form-label">請輸入帳號</label>
+    <input type="text" id="account" placeholder="帳號" autocomplete="username"/>
+    
+    <label for="amount" class="form-label">請輸入金額［最低金額：500］</label>
+    <input type="number" id="amount" placeholder="金額" min="500" value="500" step="100"/>
+    
+    <label for="pay_zg" class="form-label">請選擇付款方式</label>
+    <select id="pay_zg">
+        <option value="credit">信用卡支付</option>
+        <option value="2">虛擬帳號轉帳</option>
+        <option value="21">臺灣銀行線上轉帳</option>
+        <option value="4">7-11 ibon</option>
+        <option value="6">全家FamiPort</option>
+        <option value="10">萊爾富LifeET</option>
+    </select>
+    
+    <p class="note-text">※購買後請通知管理員查驗！</p>
+    <button class="btn-epic" id="submit-btn">送出</button>
+</div>
+
+<!-- 用於提交表單的隱藏表單 -->
+<form id="funpoint-payment-form" method="POST" action="" style="display:none;">
+    <input type="hidden" name="MerchantID" value="">
+    <input type="hidden" name="MerchantTradeNo" value="">
+    <input type="hidden" name="MerchantTradeDate" value="">
+    <input type="hidden" name="PaymentType" value="aio">
+    <input type="hidden" name="TotalAmount" value="">
+    <input type="hidden" name="TradeDesc" value="">
+    <input type="hidden" name="ItemName" value="">
+    <input type="hidden" name="ReturnURL" value="">
+    <input type="hidden" name="ChoosePayment" value="Credit">
+    <input type="hidden" name="ClientBackURL" value="">
+    <input type="hidden" name="OrderResultURL" value="">
+    <input type="hidden" name="EncryptType" value="1">
+    <input type="hidden" name="CustomField1" value="">
+    <input type="hidden" name="CheckMacValue" value="">
+</form>
+
+<!-- 腳本放在頁面底部，提高頁面載入速度 -->
+<script src="script.js"></script>
+<script src="background-resize.js"></script>
+<script src="htmlcss.js"></script>
+</body>
+</html>
