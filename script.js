@@ -11,9 +11,9 @@ const CONFIG = {
         HashIV: "tpYEKUQ8D57JyDo0",
         PaymentApiUrl: "https://payment-stage.funpoint.com.tw/Cashier/AioCheckOut/V5",
         // 請更換為實際網站網址
-        ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com//funpoint_payment_notify.php",
-        ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com//index.html",
-        OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com//payment_result.php"
+        ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php",
+        ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
+        OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php"
     },
     // SmilePay設定
     smilepay: {
@@ -181,12 +181,12 @@ function processFunpointPayment(account, amount) {
         MerchantTradeDate: merchantTradeDate,
         PaymentType: "aio",
         TotalAmount: amount,
-        TradeDesc: encodeURIComponent("霸權天堂II點數"),
-        ItemName: "霸權天堂II點數",
+        TradeDesc: "腳本開發服務",
+        ItemName: "腳本開發服務",
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "Credit",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        OrderResultURL: CONFIG.funpoint.OrderResultURL + "?account=" + encodeURIComponent(account),
+        OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: account 
     };
