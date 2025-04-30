@@ -181,7 +181,7 @@ function processFunpointPayment(account, amount) {
         MerchantTradeDate: merchantTradeDate,
         PaymentType: "aio",
         TotalAmount: amount,
-        TradeDesc: "腳本開發服務",
+        TradeDesc: "ScriptsDevService",
         ItemName: "腳本開發服務",
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "Credit",
