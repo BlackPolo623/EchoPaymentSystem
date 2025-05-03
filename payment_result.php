@@ -155,25 +155,78 @@ if ($isSuccess && !empty($account) && $amount > 0) {
 
 // 記錄結果
 error_log("[$logId] 處理結果: " . ($isSuccess ? '成功' : '失敗'));
-
-// 準備重定向參數
-$redirectUrl = "paymentresult.html?success=" . ($isSuccess ? '1' : '0') .
-               "&account=" . urlencode($account) .
-               "&amount=" . urlencode($amount) .
-               "&tradeNo=" . urlencode($tradeNo);
-
-// 使用 JavaScript 重定向，以確保能夠攜帶參數
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0;url=<?php echo $redirectUrl; ?>">
-    <script>
-        window.location.href = "<?php echo htmlspecialchars($redirectUrl); ?>";
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>霸權天堂II 贊助結果</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .result-container {
+            text-align: center;
+        }
+        .countdown {
+            margin-top: 10px;
+            font-size: 14px;
+            color: rgba(158, 255, 250, 0.7);
+        }
+    </style>
 </head>
 <body>
-    <p>正在跳轉到結果頁面...</p>
+<div class="form-container result-container">
+    <h2>霸權天堂II 贊助結果</h2>
+
+    <?php if ($isSuccess): ?>
+    <div class="success-message">
+        <div style="font-size: 24px; font-weight: bold; color: #0f0; margin-bottom: 15px;">贊助成功！</div>
+        <div class="info-row">帳號: <strong><?php echo htmlspecialchars($account); ?></strong></div>
+        <div class="info-row">金額: <strong><?php echo htmlspecialchars($amount); ?> 元</strong></div>
+        <div class="info-row">交易編號: <strong><?php echo htmlspecialchars($tradeNo); ?></strong></div>
+        <div style="margin-top: 15px;">點數已加入您的帳戶，感謝您的支持！</div>
+        <div class="countdown">將在 <span id="counter">5</span> 秒後自動返回首頁</div>
+    </div>
+    <?php else: ?>
+    <div class="error-message">
+        <div style="font-size: 24px; font-weight: bold; color: #f00; margin-bottom: 15px;">贊助處理中或發生錯誤</div>
+        <?php if (!empty($account)): ?>
+        <div class="info-row">帳號: <strong><?php echo htmlspecialchars($account); ?></strong></div>
+        <?php endif; ?>
+        <div style="margin-top: 15px;">
+            您的交易可能正在處理中，或是發生了錯誤。<br>
+            請稍後查看您的帳戶點數，如有問題請聯絡客服。
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <button class="btn-epic" onclick="window.location.href='index.html'">返回贊助頁面</button>
+</div>
+
+<script>
+// 自動倒數計時返回
+<?php if ($isSuccess): ?>
+let countdown = 5;
+const counterElement = document.getElementById('counter');
+
+function updateCounter() {
+    countdown--;
+    if (counterElement) counterElement.textContent = countdown;
+
+    if (countdown <= 0) {
+        window.location.href = 'index.html';
+    } else {
+        setTimeout(updateCounter, 1000);
+    }
+}
+
+// 開始倒數
+setTimeout(updateCounter, 1000);
+<?php endif; ?>
+</script>
+<script src="script.js"></script>
+<script src="background-resize.js"></script>
+<script src="htmlcss.js"></script>
 </body>
 </html>
