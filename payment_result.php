@@ -157,7 +157,7 @@ if ($isSuccess && !empty($account) && $amount > 0) {
 error_log("[$logId] 處理結果: " . ($isSuccess ? '成功' : '失敗'));
 
 // 準備重定向參數
-$redirectUrl = "payment_result.html?success=" . ($isSuccess ? '1' : '0') .
+$redirectUrl = "paymentresult.html?success=" . ($isSuccess ? '1' : '0') .
                "&account=" . urlencode($account) .
                "&amount=" . urlencode($amount) .
                "&tradeNo=" . urlencode($tradeNo);
