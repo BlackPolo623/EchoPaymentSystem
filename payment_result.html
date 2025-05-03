@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>霸權天堂II 贊助結果</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .result-container {
+            text-align: center;
+        }
+        .countdown {
+            margin-top: 10px;
+            font-size: 14px;
+            color: rgba(158, 255, 250, 0.7);
+        }
+    </style>
+</head>
+<body>
+<div class="form-container result-container">
+    <h2>霸權天堂II 贊助結果</h2>
+
+    <div id="result-content">
+        <!-- 內容會動態載入 -->
+    </div>
+
+    <button class="btn-epic" onclick="window.location.href='index.html'">返回贊助頁面</button>
+</div>
+
+<script src="htmlcss.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 從 URL 參數讀取結果
+        const params = new URLSearchParams(window.location.search);
+        const success = params.get('success') === '1';
+        const account = params.get('account') || '';
+        const amount = params.get('amount') || '';
+        const tradeNo = params.get('tradeNo') || '';
+
+        const resultDiv = document.getElementById('result-content');
+
+        if (success) {
+            resultDiv.innerHTML = `
+                <div class="success-message">
+                    <div style="font-size: 24px; font-weight: bold; color: #0f0; margin-bottom: 15px;">贊助成功！</div>
+                    <div class="info-row">帳號: <strong>${account}</strong></div>
+                    <div class="info-row">金額: <strong>${amount} 元</strong></div>
+                    <div class="info-row">交易編號: <strong>${tradeNo}</strong></div>
+                    <div style="margin-top: 15px;">點數已加入您的帳戶，感謝您的支持！</div>
+                    <div class="countdown">將在 <span id="counter">5</span> 秒後自動返回首頁</div>
+                </div>
+            `;
+
+            // 倒數計時
+            let countdown = 5;
+            const counterElement = document.getElementById('counter');
+
+            function updateCounter() {
+                countdown--;
+                if (counterElement) counterElement.textContent = countdown;
+
+                if (countdown <= 0) {
+                    window.location.href = 'index.html';
+                } else {
+                    setTimeout(updateCounter, 1000);
+                }
+            }
+
+            setTimeout(updateCounter, 1000);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="error-message">
+                    <div style="font-size: 24px; font-weight: bold; color: #f00; margin-bottom: 15px;">贊助處理中或發生錯誤</div>
+                    ${account ? `<div class="info-row">帳號: <strong>${account}</strong></div>` : ''}
+                    <div style="margin-top: 15px;">
+                        您的交易可能正在處理中，或是發生了錯誤。<br>
+                        請稍後查看您的帳戶點數，如有問題請聯絡客服。
+                    </div>
+                </div>
+            `;
+        }
+    });
+</script>
+</body>
+</html>
