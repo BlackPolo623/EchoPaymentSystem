@@ -9,7 +9,7 @@ const CONFIG = {
         MerchantID: "1020977",
         HashKey: "cUHKRU04BaDCprxJ",
         HashIV: "tpYEKUQ8D57JyDo0",
-        PaymentApiUrl: "https://payment-stage.funpoint.com.tw/Cashier/AioCheckOut/V5",
+        PaymentApiUrl: "https://payment.funpoint.com.tw/Cashier/AioCheckOut/V5",
         // 請更換為實際網站網址
         ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php",
         ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
@@ -122,7 +122,7 @@ async function recordPayment() {
         
         const amount = get_money();
         if (!amount) {
-            throw new Error('金額輸入錯誤');
+            throw new Error('金額輸入錯誤或是低於最低限制');
         }
         
         const payMethod = document.getElementById('pay_zg').value;
