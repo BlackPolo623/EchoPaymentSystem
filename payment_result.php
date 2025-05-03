@@ -158,6 +158,7 @@ error_log("[$logId] 處理結果: " . ($isSuccess ? '成功' : '失敗'));
 ?>
 <!DOCTYPE html>
 <html lang="zh-TW">
+    <script src="htmlcss.js"></script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
