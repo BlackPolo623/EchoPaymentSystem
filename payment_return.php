@@ -35,7 +35,7 @@ file_put_contents('payment_return.log', $logData, FILE_APPEND);
 // 檢查必要參數
 if (!isset($_POST['Data_id']) || !isset($_POST['Amount']) || !isset($_POST['Email']) || !isset($_POST['Mid_smilepay'])) {
     logError($logId, "缺少必要參數");
-    echo "<Roturlstatus>ERROR</Roturlstatus>";
+    echo "<Roturlstatus>ERROR缺少必要參數</Roturlstatus>";
     exit;
 }
 
@@ -50,7 +50,7 @@ $remark = isset($_POST['Remark']) ? $_POST['Remark'] : ''; // 備註
 // 驗證參數
 if (empty($data_id) || empty($amount) || empty($account) || empty($mid_smilepay)) {
     logError($logId, "參數值無效: data_id={$data_id}, amount={$amount}, account={$account}");
-    echo "<Roturlstatus>ERROR</Roturlstatus>";
+    echo "<Roturlstatus>ERROR參數值無效: data_id={$data_id}, amount={$amount}, account={$account}</Roturlstatus>";
     exit;
 }
 
@@ -61,7 +61,7 @@ $calculated_mid = strtoupper(md5($str_to_hash));
 // 驗證 SmilePay 發送的驗證碼
 if ($calculated_mid !== $mid_smilepay) {
     logError($logId, "驗證碼不匹配: 計算值={$calculated_mid}, 接收值={$mid_smilepay}");
-    echo "<Roturlstatus>ERROR</Roturlstatus>";
+    echo "<Roturlstatus>ERROR驗證碼不匹配: 計算值={$calculated_mid}, 接收值={$mid_smilepay}</Roturlstatus>";
     exit;
 }
 
@@ -140,7 +140,7 @@ try {
     
     // 記錄錯誤
     logError($logId, "數據庫錯誤: " . $e->getMessage());
-    echo "<Roturlstatus>ERROR</Roturlstatus>";
+    echo "<Roturlstatus>ERROR數據庫錯誤</Roturlstatus>";
 }
 
 /**
