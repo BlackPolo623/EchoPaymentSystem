@@ -12,7 +12,7 @@ ini_set('error_log', 'app_errors.log');
 // 執行時間追蹤
 $start_time = microtime(true);
 
-// 載入配置（理想情況下應該放在獨立的配置文件中）
+// 載入配置（理想情況下應該放在獨立的配置文件中） 更新
 $config = [
     'db' => [
         'host' => '125.228.68.9',
