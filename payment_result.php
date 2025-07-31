@@ -28,7 +28,7 @@ $logId = uniqid('RESULT_');
 $logData = "[" . date('Y-m-d H:i:s') . "][$logId] 接收到歐買尬金流前端回調\n";
 $logData .= "POST數據: " . print_r($_POST, true) . "\n";
 $logData .= "GET數據: " . print_r($_GET, true) . "\n";
-file_put_contents(__DIR__ .'funpoint_payment_return.log', $logData, FILE_APPEND);
+file_put_contents('funpoint_payment_return.log', $logData, FILE_APPEND);
 
 // 接收回傳的資料
 $receivedData = $_POST;
