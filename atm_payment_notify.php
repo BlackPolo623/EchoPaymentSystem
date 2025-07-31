@@ -89,9 +89,7 @@ if (empty($account)) {
 // 2. 獲取交易資料
 $merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
 $amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
-$paymentType = $receivedData['PaymentType'] ?? 'ATM';
-$paymentDate = $receivedData['PaymentDate'] ?? date('Y-m-d H:i:s');
-$remark = "ATM 付款 - {$paymentType} - {$paymentDate}";
+$remark = "歐買尬金流付款 - " . date('Y-m-d H:i:s');
 
 // 驗證交易數據
 if (empty($merchantTradeNo) || $amount <= 0) {
@@ -121,9 +119,9 @@ try {
 
     if ($stmt->rowCount() > 0) {
         // 交易已存在，避免重複處理
-        logTransaction($transactionId, 'INFO', "ATM 交易已存在: {$merchantTradeNo}");
+        logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");
         $pdo->commit();
-        echo '1|OK';
+        echo 'OK';
         exit;
     }
 
@@ -139,9 +137,7 @@ try {
         exit;
     }
 
-    // 移除虛擬帳號狀態更新，直接處理付款
-
-    // 插入交易記錄到 autodonater 表
+    // 插入交易記錄
     $stmt = $pdo->prepare("
         INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo)
         VALUES (:money, :accountID, 1, :note, :tradeNo)
@@ -158,7 +154,7 @@ try {
     $pdo->commit();
 
     // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "成功處理 ATM 付款: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
+    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
 
 } catch (PDOException $e) {
     // 回滾交易
@@ -167,13 +163,13 @@ try {
     }
 
     // 記錄錯誤
-    logTransaction($transactionId, 'ERROR', "ATM 數據庫錯誤: " . $e->getMessage());
+    logTransaction($transactionId, 'ERROR', "數據庫錯誤: " . $e->getMessage());
     echo '0|數據庫錯誤';
     exit;
 }
 
 // 回應歐買尬金流
-echo '1|OK';
+echo 'OK';
 
 /**
  * 產生唯一交易ID用於日誌追蹤

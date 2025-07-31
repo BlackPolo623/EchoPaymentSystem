@@ -238,7 +238,7 @@ function processATMPayment(account, amount) {
         TotalAmount: amount,
         TradeDesc: "腳本開發服務",
         ItemName: "腳本開發服務",
-        ReturnURL: CONFIG.funpoint.ATMReturnURL,
+        ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "ATM", // 固定為 ATM
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
         //OrderResultURL: CONFIG.funpoint.OrderResultURL,
