@@ -12,6 +12,11 @@
     <title>ATM 虛擬帳號 - 霸權天堂II</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* 修復滑鼠游標問題 */
+        body, * {
+            cursor: auto !important;
+        }
+
         .atm-info-container {
             max-width: 600px;
             margin: 50px auto;
@@ -20,15 +25,17 @@
             border-radius: 15px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             text-align: center;
+            cursor: auto !important; /* 確保容器內游標正常 */
         }
-        
+
         .atm-title {
             color: #2c3e50;
             font-size: 24px;
             margin-bottom: 20px;
             font-weight: bold;
+            cursor: auto !important;
         }
-        
+
         .atm-info {
             background: #f8f9fa;
             border: 2px solid #e9ecef;
@@ -36,38 +43,48 @@
             padding: 20px;
             margin: 20px 0;
             text-align: left;
+            cursor: auto !important;
         }
-        
+
         .atm-info h3 {
             color: #dc3545;
             margin-top: 0;
             margin-bottom: 15px;
             font-size: 18px;
+            cursor: auto !important;
         }
-        
+
         .info-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 10px;
             padding: 8px 0;
             border-bottom: 1px solid #dee2e6;
+            cursor: auto !important;
         }
-        
+
         .info-row:last-child {
             border-bottom: none;
         }
-        
+
         .info-label {
             font-weight: bold;
             color: #495057;
+            cursor: auto !important;
         }
-        
+
         .info-value {
             color: #dc3545;
             font-weight: bold;
             font-family: 'Courier New', monospace;
+            cursor: pointer !important; /* 虛擬帳號可點擊複製 */
         }
-        
+
+        .info-value:hover {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
         .important-note {
             background: #fff3cd;
             border: 1px solid #ffeaa7;
@@ -75,24 +92,36 @@
             padding: 15px;
             margin: 20px 0;
             color: #856404;
+            cursor: auto !important;
         }
-        
+
         .back-button {
             background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             padding: 12px 30px;
             border-radius: 25px;
-            cursor: pointer;
+            cursor: pointer !important; /* 按鈕保持手型游標 */
             font-size: 16px;
             text-decoration: none;
             display: inline-block;
             margin-top: 20px;
             transition: transform 0.3s ease;
         }
-        
+
         .back-button:hover {
             transform: translateY(-2px);
+            cursor: pointer !important;
+        }
+
+        /* 確保所有文字和元素都有正常游標 */
+        p, div, span, ul, li {
+            cursor: auto !important;
+        }
+
+        /* 可點擊元素特別處理 */
+        a, button, [onclick] {
+            cursor: pointer !important;
         }
     </style>
 </head>

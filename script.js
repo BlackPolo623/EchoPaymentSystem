@@ -200,10 +200,14 @@ function processFunpointPayment(account, amount, paymentMethod = 'Credit') {
      // ATM支付的額外參數
      if (paymentMethod === 'ATM') {
          params.ExpireDate = 3; // ATM 繳費期限 3 天
+
          // 啟用 ATM 專用功能
-         params.PaymentInfoURL = CONFIG.funpoint.PaymentInfoURL;  // Server端接收虛擬帳號資訊
-         params.ClientRedirectURL = CONFIG.funpoint.ClientRedirectURL; // 用戶看到虛擬帳號頁面
-         params.NeedExtraPaidInfo = "Y"; // 要求回傳額外付款資訊
+         params.PaymentInfoURL = CONFIG.funpoint.PaymentInfoURL;
+         params.ClientRedirectURL = CONFIG.funpoint.ClientRedirectURL;
+         params.NeedExtraPaidInfo = "Y";
+     } else {
+         // 信用卡支付：確保沒有ATM專用參數
+         // 不設置任何ATM相關參數
      }
     
     // 計算檢查碼
