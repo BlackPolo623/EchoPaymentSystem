@@ -73,7 +73,7 @@ if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
 // 驗證交易狀態
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
     logTransaction($transactionId, 'INFO', "ATM 交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
-    echo 'OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
+    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
     exit;
 }
 
@@ -122,7 +122,7 @@ try {
         // 交易已存在，避免重複處理
         logTransaction($transactionId, 'INFO', "ATM 交易已存在: {$merchantTradeNo}");
         $pdo->commit();
-        echo 'OK';
+        echo '1|OK';
         exit;
     }
 
@@ -170,7 +170,7 @@ try {
 }
 
 // 回應歐買尬金流
-echo 'OK';
+echo '1|OK';
 
 /**
  * 產生唯一交易ID用於日誌追蹤
