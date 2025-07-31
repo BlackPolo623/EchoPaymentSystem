@@ -14,6 +14,9 @@ const CONFIG = {
         ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php",
         ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
         OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php"
+        // 新增這兩行
+        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",
+        ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"
     },
     // SmilePay設定
     smilepay: {
@@ -197,6 +200,10 @@ function processFunpointPayment(account, amount, paymentMethod = 'Credit') {
      // ATM支付的額外參數
      if (paymentMethod === 'ATM') {
          params.ExpireDate = 3; // ATM 繳費期限 3 天
+         // 啟用 ATM 專用功能
+         params.PaymentInfoURL = CONFIG.funpoint.PaymentInfoURL;  // Server端接收虛擬帳號資訊
+         params.ClientRedirectURL = CONFIG.funpoint.ClientRedirectURL; // 用戶看到虛擬帳號頁面
+         params.NeedExtraPaidInfo = "Y"; // 要求回傳額外付款資訊
      }
     
     // 計算檢查碼
