@@ -216,7 +216,7 @@ function processFunpointPayment(account, amount) {
 
 function processATMPayment(account, amount) {
     // 生成交易編號 (需確保不重複)
-    const merchantTradeNo = "HE" + generateUniqueId();
+    const merchantTradeNo = "ATM" + generateUniqueId();
 
     // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
     const now = new Date();
