@@ -1,4 +1,4 @@
-/ 設定檔 - 所有配置集中管理
+// 設定檔 - 所有配置集中管理
 const CONFIG = {
     minAmount: 500,
     apiEndpoints: {
