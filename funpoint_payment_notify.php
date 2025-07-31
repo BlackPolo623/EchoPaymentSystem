@@ -10,7 +10,7 @@ ini_set('error_log', 'payment_errors.log');
 // 載入配置
 $config = [
     'db' => [
-        'host' => '220.135.250.156',
+        'host' => '125.228.68.9',
         'port' => '3306',
         'name' => 'l2jmobius_fafurion',
         'user' => 'payment',

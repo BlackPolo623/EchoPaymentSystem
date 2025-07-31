@@ -15,7 +15,7 @@ $start_time = microtime(true);
 // 載入配置（理想情況下應該放在獨立的配置文件中） 更新
 $config = [
     'db' => [
-        'host' => '220.135.250.156',
+        'host' => '125.228.68.9',
         'port' => '3306',
         'name' => 'l2jmobius_fafurion',
         'user' => 'payment',
