@@ -72,12 +72,8 @@ $calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
 
 // 驗證交易狀態
 if (!isset($receivedData['RtnCode'])) {
-    logTransaction($transactionId, 'INFO', "ATM 交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
-    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
-    exit;
-}
-if ($receivedData['RtnCode'] == '2') {
-    echo '交易取號成功';
+    logTransaction($transactionId, 'ERROR', '缺少 RtnCode');
+    echo '0|缺少 RtnCode';
     exit;
 }
 
