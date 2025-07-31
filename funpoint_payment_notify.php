@@ -1,9 +1,16 @@
 <?php
-// funpoint_payment_notify.php
-// 設置錯誤日誌
+/**
+ * funpoint_payment_notify.php
+ * 歐買尬金流付款結果通知處理檔案
+ * 版本：2.0
+ * 更新日期：2025-07-31
+ */
+
+// 設置錯誤日誌和編碼
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 ini_set('error_log', 'payment_errors.log');
+header('Content-Type: text/html; charset=utf-8');
 
 // 載入配置
 $config = [
@@ -16,172 +23,245 @@ $config = [
         'charset' => 'utf8mb4'
     ],
     'funpoint' => [
+        'MerchantID' => '1020977',
         'HashKey' => 'cUHKRU04BaDCprxJ',
         'HashIV' => 'tpYEKUQ8D57JyDo0'
     ]
 ];
 
-// 開始記錄交易
+// 開始處理
 $transactionId = generateTransactionId();
-logTransaction($transactionId, 'START', '接收到歐買尬金流通知');
+logMessage($transactionId, 'START', '=== 開始處理歐買尬金流通知 ===');
 
-// 接收回傳的資料
-$receivedData = $_POST;
-logTransaction($transactionId, 'DATA', $receivedData);
-
-// 驗證檢查碼
-if (!isset($receivedData['CheckMacValue'])) {
-    logTransaction($transactionId, 'ERROR', '缺少CheckMacValue參數');
-    echo '0|缺少CheckMacValue參數';
-    exit;
-}
-
-$receivedCheckMacValue = $receivedData['CheckMacValue'];
-unset($receivedData['CheckMacValue']);
-
-// 排序參數並計算檢查碼
-ksort($receivedData);
-$checkStr = "HashKey=" . $config['funpoint']['HashKey'];
-foreach ($receivedData as $key => $value) {
-    $checkStr .= "&" . $key . "=" . $value;
-}
-$checkStr .= "&HashIV=" . $config['funpoint']['HashIV'];
-$checkStr = urlencode($checkStr);
-$checkStr = strtolower($checkStr);
-
-// 取代特殊字元
-$checkStr = str_replace('%2d', '-', $checkStr);
-$checkStr = str_replace('%5f', '_', $checkStr);
-$checkStr = str_replace('%2e', '.', $checkStr);
-$checkStr = str_replace('%21', '!', $checkStr);
-$checkStr = str_replace('%2a', '*', $checkStr);
-$checkStr = str_replace('%28', '(', $checkStr);
-$checkStr = str_replace('%29', ')', $checkStr);
-
-// 計算檢查碼
-$calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
-
-// 驗證檢查碼
-if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
-    logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
-    echo '0|CheckMacValue 驗證失敗';
-    exit;
-}
-
-// 驗證交易狀態
-if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
-    logTransaction($transactionId, 'INFO', "交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
-    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
-    exit;
-}
-
-// 1. 從自訂欄位取得用戶帳號
-$account = $receivedData['CustomField1'] ?? '';
-if (empty($account)) {
-    logTransaction($transactionId, 'ERROR', "找不到用戶帳號");
-    echo '0|找不到用戶帳號';
-    exit;
-}
-
-// 2. 獲取交易資料
-$merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
-$amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
-$remark = "歐買尬金流付款 - " . date('Y-m-d H:i:s');
-
-// 驗證交易數據
-if (empty($merchantTradeNo) || $amount <= 0) {
-    logTransaction($transactionId, 'ERROR', "無效的交易數據: MerchantTradeNo={$merchantTradeNo}, amount={$amount}");
-    echo '0|無效的交易數據';
-    exit;
-}
-
-// 3. 處理交易
 try {
-    // 創建數據庫連接
-    $dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
-    $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ];
-    
-    $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
-    
-    // 開始交易
-    $pdo->beginTransaction();
-    
-    // 首先檢查該交易是否已經處理過
-    $stmt = $pdo->prepare("SELECT BillID FROM autodonater WHERE TradeNo = :tradeNo LIMIT 1");
-    $stmt->execute(['tradeNo' => $merchantTradeNo]);
-    
-    if ($stmt->rowCount() > 0) {
-        // 交易已存在，避免重複處理
-        logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");
-        $pdo->commit();
+    // 1. 接收並記錄所有回傳資料
+    $receivedData = $_POST;
+
+    // 記錄原始接收資料
+    logMessage($transactionId, 'RECEIVED', '接收到的原始資料: ' . json_encode($receivedData, JSON_UNESCAPED_UNICODE));
+
+    // 檢查是否有接收到資料
+    if (empty($receivedData)) {
+        throw new Exception('沒有接收到任何 POST 資料');
+    }
+
+    // 2. 驗證必要參數
+    $requiredFields = ['MerchantID', 'MerchantTradeNo', 'RtnCode', 'TradeAmt', 'CheckMacValue'];
+    foreach ($requiredFields as $field) {
+        if (!isset($receivedData[$field]) || $receivedData[$field] === '') {
+            throw new Exception("缺少必要參數: {$field}");
+        }
+    }
+
+    // 3. 驗證商戶ID
+    if ($receivedData['MerchantID'] !== $config['funpoint']['MerchantID']) {
+        throw new Exception("商戶ID不匹配: 接收到 {$receivedData['MerchantID']}, 預期 {$config['funpoint']['MerchantID']}");
+    }
+
+    // 4. 驗證檢查碼
+    $receivedCheckMacValue = $receivedData['CheckMacValue'];
+    unset($receivedData['CheckMacValue']); // 移除檢查碼以進行計算
+
+    $calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']);
+
+    logMessage($transactionId, 'CHECKSUM', "檢查碼驗證 - 接收: {$receivedCheckMacValue}, 計算: {$calculatedCheckMacValue}");
+
+    if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
+        throw new Exception("檢查碼驗證失敗");
+    }
+
+    // 5. 檢查交易狀態
+    if ($receivedData['RtnCode'] !== '1') {
+        $rtnMsg = $receivedData['RtnMsg'] ?? '未知錯誤';
+        logMessage($transactionId, 'PAYMENT_FAILED', "付款失敗 - RtnCode: {$receivedData['RtnCode']}, RtnMsg: {$rtnMsg}");
+        echo '1|OK'; // 仍然回應成功，表示已收到通知
+        exit;
+    }
+
+    // 6. 檢查是否為模擬付款
+    if (isset($receivedData['SimulatePaid']) && $receivedData['SimulatePaid'] === '1') {
+        logMessage($transactionId, 'SIMULATE', "這是模擬付款，不進行實際處理");
         echo '1|OK';
         exit;
     }
-    
-    // 驗證賬號是否存在
-    $stmt = $pdo->prepare("SELECT login FROM accounts WHERE login = :account LIMIT 1");
-    $stmt->execute(['account' => $account]);
-    
-    if ($stmt->rowCount() == 0) {
-        // 賬號不存在
-        logTransaction($transactionId, 'ERROR', "賬號不存在: {$account}");
-        $pdo->rollBack();
-        echo '0|賬號不存在';
-        exit;
+
+    // 7. 提取交易資料
+    $merchantTradeNo = $receivedData['MerchantTradeNo'];
+    $tradeNo = $receivedData['TradeNo'] ?? '';
+    $tradeAmount = intval($receivedData['TradeAmt']);
+    $paymentDate = $receivedData['PaymentDate'] ?? date('Y/m/d H:i:s');
+    $paymentType = $receivedData['PaymentType'] ?? 'Unknown';
+    $account = $receivedData['CustomField1'] ?? '';
+
+    // 8. 驗證用戶帳號
+    if (empty($account)) {
+        throw new Exception("找不到用戶帳號 (CustomField1 為空)");
     }
-    
-    // 插入交易記錄
-    $stmt = $pdo->prepare("
-        INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo) 
-        VALUES (:money, :accountID, 1, :note, :tradeNo)
-    ");
-    
-    $stmt->execute([
-        'money' => $amount,
-        'accountID' => $account,
-        'note' => $remark,
-        'tradeNo' => $merchantTradeNo
+
+    // 9. 處理資料庫交易
+    $result = processPayment([
+        'transactionId' => $transactionId,
+        'merchantTradeNo' => $merchantTradeNo,
+        'tradeNo' => $tradeNo,
+        'amount' => $tradeAmount,
+        'account' => $account,
+        'paymentDate' => $paymentDate,
+        'paymentType' => $paymentType,
+        'config' => $config
     ]);
-    
-    // 提交交易
-    $pdo->commit();
-    
-    // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
-    
-} catch (PDOException $e) {
-    // 回滾交易
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
+
+    if ($result['success']) {
+        logMessage($transactionId, 'SUCCESS', $result['message']);
+        echo '1|OK';
+    } else {
+        throw new Exception($result['message']);
     }
-    
-    // 記錄錯誤
-    logTransaction($transactionId, 'ERROR', "數據庫錯誤: " . $e->getMessage());
-    echo '0|數據庫錯誤';
-    exit;
+
+} catch (Exception $e) {
+    logMessage($transactionId, 'ERROR', $e->getMessage());
+    echo '0|' . $e->getMessage();
+} finally {
+    logMessage($transactionId, 'END', '=== 處理完成 ===');
 }
 
-// 回應歐買尬金流
-echo '1|OK';
+/**
+ * 計算檢查碼
+ */
+function calculateCheckMacValue($data, $funpointConfig) {
+    // 移除空值參數
+    $filteredData = [];
+    foreach ($data as $key => $value) {
+        if ($value !== '' && $value !== null) {
+            $filteredData[$key] = $value;
+        }
+    }
+
+    // 按字母順序排序
+    ksort($filteredData);
+
+    // 組合字串
+    $checkString = "HashKey=" . $funpointConfig['HashKey'];
+    foreach ($filteredData as $key => $value) {
+        $checkString .= "&" . $key . "=" . $value;
+    }
+    $checkString .= "&HashIV=" . $funpointConfig['HashIV'];
+
+    // URL encode
+    $checkString = urlencode($checkString);
+
+    // 轉小寫
+    $checkString = strtolower($checkString);
+
+    // 字元替換
+    $checkString = str_replace(['%2d', '%5f', '%2e', '%21', '%2a', '%28', '%29'],
+                              ['-', '_', '.', '!', '*', '(', ')'],
+                              $checkString);
+
+    // SHA256 加密並轉大寫
+    return strtoupper(hash('sha256', $checkString));
+}
 
 /**
- * 產生唯一交易ID用於日誌追蹤
+ * 處理付款交易
+ */
+function processPayment($params) {
+    try {
+        $config = $params['config'];
+
+        // 建立資料庫連接
+        $dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+
+        $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
+
+        // 開始資料庫交易
+        $pdo->beginTransaction();
+
+        // 檢查交易是否已存在 (避免重複處理)
+        $stmt = $pdo->prepare("SELECT BillID FROM autodonater WHERE TradeNo = :tradeNo LIMIT 1");
+        $stmt->execute(['tradeNo' => $params['merchantTradeNo']]);
+
+        if ($stmt->rowCount() > 0) {
+            $pdo->commit();
+            return [
+                'success' => true,
+                'message' => "交易已存在，跳過處理: {$params['merchantTradeNo']}"
+            ];
+        }
+
+        // 驗證用戶帳號是否存在
+        $stmt = $pdo->prepare("SELECT login FROM accounts WHERE login = :account LIMIT 1");
+        $stmt->execute(['account' => $params['account']]);
+
+        if ($stmt->rowCount() === 0) {
+            $pdo->rollBack();
+            return [
+                'success' => false,
+                'message' => "用戶帳號不存在: {$params['account']}"
+            ];
+        }
+
+        // 插入交易記錄
+        $stmt = $pdo->prepare("
+            INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo, created_at)
+            VALUES (:money, :accountID, 1, :note, :tradeNo, NOW())
+        ");
+
+        $note = "歐買尬金流付款 - {$params['paymentType']} - {$params['paymentDate']} - TradeNo: {$params['tradeNo']}";
+
+        $stmt->execute([
+            'money' => $params['amount'],
+            'accountID' => $params['account'],
+            'note' => $note,
+            'tradeNo' => $params['merchantTradeNo']
+        ]);
+
+        $billId = $pdo->lastInsertId();
+
+        // 提交交易
+        $pdo->commit();
+
+        return [
+            'success' => true,
+            'message' => "成功處理付款 - BillID: {$billId}, 帳號: {$params['account']}, 金額: {$params['amount']}, 交易號: {$params['merchantTradeNo']}"
+        ];
+
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        return [
+            'success' => false,
+            'message' => "資料庫錯誤: " . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * 產生交易ID
  */
 function generateTransactionId() {
-    return 'NOTIFY_' . date('YmdHis') . '_' . substr(md5(uniqid()), 0, 8);
+    return 'PAY_' . date('YmdHis') . '_' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
 }
 
 /**
- * 記錄交易日誌
+ * 記錄日誌
  */
-function logTransaction($transactionId, $status, $data) {
+function logMessage($transactionId, $level, $message) {
     $timestamp = date('Y-m-d H:i:s');
-    $dataStr = is_array($data) ? json_encode($data) : $data;
-    $logMessage = "[$timestamp][$transactionId][$status] $dataStr\n";
-    file_put_contents('funpoint_payment_notify.log', $logMessage, FILE_APPEND);
+    $logEntry = "[{$timestamp}] [{$transactionId}] [{$level}] {$message}" . PHP_EOL;
+
+    // 寫入主要日誌檔案
+    file_put_contents('funpoint_payment_notify.log', $logEntry, FILE_APPEND | LOCK_EX);
+
+    // 如果是錯誤，也寫入錯誤日誌
+    if ($level === 'ERROR') {
+        file_put_contents('payment_errors.log', $logEntry, FILE_APPEND | LOCK_EX);
+    }
 }
 ?>
