@@ -132,10 +132,10 @@ async function recordPayment() {
         
         if (payMethod === 'credit') {
             // 使用歐買尬金流處理信用卡付款
-            processFunpointPayment(account, amount, 'Credit');
+            processCreditPayment(account, amount);
         } else if (payMethod === 'ATM') {
             // 使用歐買尬金流處理ATM虛擬帳號轉帳
-            processFunpointPayment(account, amount, 'ATM');
+            processATMPayment(account, amount);
         } else {
             // 使用SmilePay支付方式處理
             const uniqueId = generateUniqueId();
@@ -167,10 +167,10 @@ async function recordPayment() {
     }
 }
 
-function processFunpointPayment(account, amount, paymentMethod = 'Credit') {
+function processCreditPayment(account, amount) {
     // 生成交易編號 (需確保不重複)
     const merchantTradeNo = "HE" + generateUniqueId();
-    
+
     // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
     const now = new Date();
     const merchantTradeDate = now.getFullYear() + "/" +
@@ -179,44 +179,99 @@ function processFunpointPayment(account, amount, paymentMethod = 'Credit') {
                            now.getHours().toString().padStart(2, '0') + ":" +
                            now.getMinutes().toString().padStart(2, '0') + ":" +
                            now.getSeconds().toString().padStart(2, '0');
-    
-    // 組裝訂單參數
-     const params = {
-            MerchantID: CONFIG.funpoint.MerchantID,
-            MerchantTradeNo: merchantTradeNo,
-            MerchantTradeDate: merchantTradeDate,
-            PaymentType: "aio",
-            TotalAmount: amount,
-            TradeDesc: "腳本開發服務",
-            ItemName: "腳本開發服務",
-            ReturnURL: CONFIG.funpoint.ReturnURL,
-            ChoosePayment: paymentMethod,
-            ClientBackURL: CONFIG.funpoint.ClientBackURL,
-            OrderResultURL: CONFIG.funpoint.OrderResultURL,
-            EncryptType: "1",
-            CustomField1: account
-        };
 
-     // ATM支付的額外參數
-     if (paymentMethod === 'ATM') {
-         params.ExpireDate = 3; // ATM 繳費期限 3 天
+    // 組裝訂單參數 - 信用卡專用
+    const params = {
+        MerchantID: CONFIG.funpoint.MerchantID,
+        MerchantTradeNo: merchantTradeNo,
+        MerchantTradeDate: merchantTradeDate,
+        PaymentType: "aio",
+        TotalAmount: amount,
+        TradeDesc: "腳本開發服務",
+        ItemName: "腳本開發服務",
+        ReturnURL: CONFIG.funpoint.ReturnURL,
+        ChoosePayment: "Credit", // 固定為 Credit
+        ClientBackURL: CONFIG.funpoint.ClientBackURL,
+        OrderResultURL: CONFIG.funpoint.OrderResultURL,
+        EncryptType: "1",
+        CustomField1: account
+    };
 
-         // 啟用 ATM 專用功能
-         params.PaymentInfoURL = CONFIG.funpoint.PaymentInfoURL;
-         params.ClientRedirectURL = CONFIG.funpoint.ClientRedirectURL;
-         params.NeedExtraPaidInfo = "Y";
-     } else {
-         // 信用卡支付：確保沒有ATM專用參數
-         // 不設置任何ATM相關參數
-     }
-    
     // 計算檢查碼
     params.CheckMacValue = generateCheckMacValue(params);
-    
+
     // 設置表單值
     const form = document.getElementById('funpoint-payment-form');
     form.action = CONFIG.funpoint.PaymentApiUrl;
-    
+
+    // 清空表單
+    Array.from(form.elements).forEach(element => {
+        if (element.type === 'hidden') {
+            element.value = '';
+        }
+    });
+
+    // 設置信用卡參數
+    for (const key in params) {
+        if (form.elements[key]) {
+            form.elements[key].value = params[key];
+        }
+    }
+
+    // 提交表單
+    form.submit();
+}
+
+function processATMPayment(account, amount) {
+    // 生成交易編號 (需確保不重複)
+    const merchantTradeNo = "HE" + generateUniqueId();
+
+    // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
+    const now = new Date();
+    const merchantTradeDate = now.getFullYear() + "/" +
+                           (now.getMonth() + 1).toString().padStart(2, '0') + "/" +
+                           now.getDate().toString().padStart(2, '0') + " " +
+                           now.getHours().toString().padStart(2, '0') + ":" +
+                           now.getMinutes().toString().padStart(2, '0') + ":" +
+                           now.getSeconds().toString().padStart(2, '0');
+
+    // 組裝訂單參數 - ATM 專用
+    const params = {
+        MerchantID: CONFIG.funpoint.MerchantID,
+        MerchantTradeNo: merchantTradeNo,
+        MerchantTradeDate: merchantTradeDate,
+        PaymentType: "aio",
+        TotalAmount: amount,
+        TradeDesc: "腳本開發服務",
+        ItemName: "腳本開發服務",
+        ReturnURL: CONFIG.funpoint.ReturnURL,
+        ChoosePayment: "ATM", // 固定為 ATM
+        ClientBackURL: CONFIG.funpoint.ClientBackURL,
+        OrderResultURL: CONFIG.funpoint.OrderResultURL,
+        EncryptType: "1",
+        CustomField1: account,
+        // ATM 專用參數
+        ExpireDate: 3,
+        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
+        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
+        NeedExtraPaidInfo: "Y"
+    };
+
+    // 計算檢查碼
+    params.CheckMacValue = generateCheckMacValue(params);
+
+    // 設置表單值
+    const form = document.getElementById('funpoint-payment-form');
+    form.action = CONFIG.funpoint.PaymentApiUrl;
+
+    // 清空表單
+    Array.from(form.elements).forEach(element => {
+        if (element.type === 'hidden') {
+            element.value = '';
+        }
+    });
+
+    // 設置 ATM 參數
     for (const key in params) {
         if (form.elements[key]) {
             form.elements[key].value = params[key];
