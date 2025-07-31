@@ -15,10 +15,11 @@ const CONFIG = {
         ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
         OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php",
         // 新增這兩行
-        ATMReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_notify.php",
-        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",
-        ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"
-    },
+        // ATM 專用設定都正確
+            ATMReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_notify.php",      // 付款完成通知
+            PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",      // 取號完成通知
+            ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"        // 用戶看到的頁面
+        },
     // SmilePay設定
     smilepay: {
         dcvc: "16761",
@@ -240,7 +241,7 @@ function processATMPayment(account, amount) {
         ReturnURL: CONFIG.funpoint.ATMReturnURL,
         ChoosePayment: "ATM", // 固定為 ATM
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        OrderResultURL: CONFIG.funpoint.OrderResultURL,
+        //OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: account,
         // ATM 專用參數
