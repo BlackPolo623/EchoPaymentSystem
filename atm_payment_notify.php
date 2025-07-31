@@ -1,6 +1,6 @@
 <?php
 // atm_payment_notify.php
-// ATM 專用 - 基於成功的信用卡版本簡化
+// ATM 付款完成通知處理 (ReturnURL)
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -25,7 +25,7 @@ $config = [
 
 // 開始記錄交易
 $transactionId = generateTransactionId();
-logTransaction($transactionId, 'START', '接收到 ATM 付款通知');
+logTransaction($transactionId, 'START', '接收到 ATM 付款完成通知');
 
 // 接收回傳的資料
 $receivedData = $_POST;
@@ -39,12 +39,13 @@ if (!isset($receivedData['CheckMacValue'])) {
 }
 
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
-unset($receivedData['CheckMacValue']);
+$checkData = $receivedData;
+unset($checkData['CheckMacValue']);
 
 // 排序參數並計算檢查碼
-ksort($receivedData);
+ksort($checkData);
 $checkStr = "HashKey=" . $config['funpoint']['HashKey'];
-foreach ($receivedData as $key => $value) {
+foreach ($checkData as $key => $value) {
     $checkStr .= "&" . $key . "=" . $value;
 }
 $checkStr .= "&HashIV=" . $config['funpoint']['HashIV'];
@@ -70,18 +71,13 @@ if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
     exit;
 }
 
-// 驗證交易狀態
-if (!isset($receivedData['RtnCode'])) {
-    logTransaction($transactionId, 'ERROR', '缺少 RtnCode');
-    echo '0|缺少 RtnCode';
+// 驗證交易狀態 - ATM 付款成功時 RtnCode 應該是 1
+if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
+    logTransaction($transactionId, 'INFO', "ATM 交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
+    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
     exit;
 }
-if ($receivedData['RtnCode'] !== '1') {
-    // 可選：記錄 log（例如收到取號成功 RtnCode == 2）
-    logTransaction($transactionId, 'INFO', "忽略未付款的通知: RtnCode=" . $receivedData['RtnCode']);
-    echo 'RtnCode 不等於1 等待中';
-    return; // 結束當前請求，但不中止伺服器執行（不 exit）
-}
+
 // 1. 從自訂欄位取得用戶帳號
 $account = $receivedData['CustomField1'] ?? '';
 if (empty($account)) {
@@ -104,7 +100,7 @@ if (empty($merchantTradeNo) || $amount <= 0) {
     exit;
 }
 
-// 3. 處理交易 - 完全複製信用卡的邏輯
+// 3. 處理交易
 try {
     // 創建數據庫連接
     $dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
@@ -143,7 +139,15 @@ try {
         exit;
     }
 
-    // 插入交易記錄 - 使用和信用卡完全相同的邏輯
+    // 更新 ATM 虛擬帳號狀態為已付款（如果記錄存在）
+    $updateATMStmt = $pdo->prepare("
+        UPDATE atm_virtual_accounts
+        SET status = 'paid', paid_at = NOW()
+        WHERE MerchantTradeNo = :tradeNo AND status = 'pending'
+    ");
+    $updateATMStmt->execute(['tradeNo' => $merchantTradeNo]);
+
+    // 插入交易記錄到 autodonater 表
     $stmt = $pdo->prepare("
         INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo)
         VALUES (:money, :accountID, 1, :note, :tradeNo)
@@ -160,7 +164,7 @@ try {
     $pdo->commit();
 
     // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "成功處理 ATM 交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
+    logTransaction($transactionId, 'SUCCESS', "成功處理 ATM 付款: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
 
 } catch (PDOException $e) {
     // 回滾交易
@@ -181,11 +185,11 @@ echo '1|OK';
  * 產生唯一交易ID用於日誌追蹤
  */
 function generateTransactionId() {
-    return 'ATM_' . date('YmdHis') . '_' . substr(md5(uniqid()), 0, 8);
+    return 'ATM_PAY_' . date('YmdHis') . '_' . substr(md5(uniqid()), 0, 8);
 }
 
 /**
- * 記錄交易日誌 - 使用和信用卡相同的方式
+ * 記錄交易日誌
  */
 function logTransaction($transactionId, $status, $data) {
     $timestamp = date('Y-m-d H:i:s');
