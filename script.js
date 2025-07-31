@@ -13,10 +13,7 @@ const CONFIG = {
         // 請更換為實際網站網址
         ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php",
         ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
-        OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php",
-        // 新增這兩行
-        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",
-        ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"
+        OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php"
     },
     // SmilePay設定
     smilepay: {
@@ -131,11 +128,8 @@ async function recordPayment() {
         const payMethod = document.getElementById('pay_zg').value;
 
         if (payMethod === 'credit') {
-             // 使用歐買尬金流處理信用卡付款
-             processFunpointPayment(account, amount);
-        } else if (payMethod === 'ATM') {
-             // 使用歐買尬金流處理ATM虛擬帳號轉帳
-             processATMPayment(account, amount);
+            // 使用歐買尬金流處理信用卡付款
+            processFunpointPayment(account, amount);
         } else {
             // 使用SmilePay支付方式處理
             const uniqueId = generateUniqueId();
@@ -204,66 +198,6 @@ function processFunpointPayment(account, amount) {
     const form = document.getElementById('funpoint-payment-form');
     form.action = CONFIG.funpoint.PaymentApiUrl;
 
-    for (const key in params) {
-        if (form.elements[key]) {
-            form.elements[key].value = params[key];
-        }
-    }
-
-    // 提交表單
-    form.submit();
-}
-
-function processATMPayment(account, amount) {
-    // 生成交易編號 (需確保不重複)
-    const merchantTradeNo = "HE" + generateUniqueId();
-
-    // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
-    const now = new Date();
-    const merchantTradeDate = now.getFullYear() + "/" +
-                           (now.getMonth() + 1).toString().padStart(2, '0') + "/" +
-                           now.getDate().toString().padStart(2, '0') + " " +
-                           now.getHours().toString().padStart(2, '0') + ":" +
-                           now.getMinutes().toString().padStart(2, '0') + ":" +
-                           now.getSeconds().toString().padStart(2, '0');
-
-    // 組裝訂單參數 - ATM 專用
-    const params = {
-        MerchantID: CONFIG.funpoint.MerchantID,
-        MerchantTradeNo: merchantTradeNo,
-        MerchantTradeDate: merchantTradeDate,
-        PaymentType: "aio",
-        TotalAmount: amount,
-        TradeDesc: "腳本開發服務",
-        ItemName: "腳本開發服務",
-        ReturnURL: CONFIG.funpoint.ReturnURL,
-        ChoosePayment: "ATM", // 固定為 ATM
-        ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        OrderResultURL: CONFIG.funpoint.OrderResultURL,
-        EncryptType: "1",
-        CustomField1: account,
-        // ATM 專用參數
-        ExpireDate: 3,
-        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
-        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
-        NeedExtraPaidInfo: "Y"
-    };
-
-    // 計算檢查碼
-    params.CheckMacValue = generateCheckMacValue(params);
-
-    // 設置表單值
-    const form = document.getElementById('funpoint-ATMpayment-form');
-    form.action = CONFIG.funpoint.PaymentApiUrl;
-
-    // 清空表單
-    Array.from(form.elements).forEach(element => {
-        if (element.type === 'hidden') {
-            element.value = '';
-        }
-    });
-
-    // 設置 ATM 參數
     for (const key in params) {
         if (form.elements[key]) {
             form.elements[key].value = params[key];
