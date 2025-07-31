@@ -194,6 +194,7 @@ function processFunpointPayment(account, amount) {
             ClientBackURL: CONFIG.funpoint.ClientBackURL,
             OrderResultURL: CONFIG.funpoint.OrderResultURL,
             EncryptType: "1",
+            ExpireDate: 3,
             CustomField1: account
         };
 
