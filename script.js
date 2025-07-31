@@ -132,7 +132,7 @@ async function recordPayment() {
 
         if (payMethod === 'credit') {
              // 使用歐買尬金流處理信用卡付款
-             rocessFunpointPayment(account, amount);
+             processFunpointPayment(account, amount);
         } else if (payMethod === 'ATM') {
              // 使用歐買尬金流處理ATM虛擬帳號轉帳
              processATMPayment(account, amount);
