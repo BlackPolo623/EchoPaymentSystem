@@ -73,7 +73,7 @@ if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
 // 驗證交易狀態
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
     logTransaction($transactionId, 'INFO', "交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
-    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
+    echo 'OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
     exit;
 }
 
@@ -106,28 +106,28 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
-    
+
     $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
-    
+
     // 開始交易
     $pdo->beginTransaction();
-    
+
     // 首先檢查該交易是否已經處理過
     $stmt = $pdo->prepare("SELECT BillID FROM autodonater WHERE TradeNo = :tradeNo LIMIT 1");
     $stmt->execute(['tradeNo' => $merchantTradeNo]);
-    
+
     if ($stmt->rowCount() > 0) {
         // 交易已存在，避免重複處理
         logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");
         $pdo->commit();
-        echo '1|OK';
+        echo 'OK';
         exit;
     }
-    
+
     // 驗證賬號是否存在
     $stmt = $pdo->prepare("SELECT login FROM accounts WHERE login = :account LIMIT 1");
     $stmt->execute(['account' => $account]);
-    
+
     if ($stmt->rowCount() == 0) {
         // 賬號不存在
         logTransaction($transactionId, 'ERROR', "賬號不存在: {$account}");
@@ -135,32 +135,32 @@ try {
         echo '0|賬號不存在';
         exit;
     }
-    
+
     // 插入交易記錄
     $stmt = $pdo->prepare("
-        INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo) 
+        INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo)
         VALUES (:money, :accountID, 1, :note, :tradeNo)
     ");
-    
+
     $stmt->execute([
         'money' => $amount,
         'accountID' => $account,
         'note' => $remark,
         'tradeNo' => $merchantTradeNo
     ]);
-    
+
     // 提交交易
     $pdo->commit();
-    
+
     // 記錄成功
     logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
-    
+
 } catch (PDOException $e) {
     // 回滾交易
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    
+
     // 記錄錯誤
     logTransaction($transactionId, 'ERROR', "數據庫錯誤: " . $e->getMessage());
     echo '0|數據庫錯誤';
@@ -168,7 +168,7 @@ try {
 }
 
 // 回應歐買尬金流
-echo '1|OK';
+echo 'OK';
 
 /**
  * 產生唯一交易ID用於日誌追蹤
