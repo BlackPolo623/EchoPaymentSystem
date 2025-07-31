@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模擬歐買尬金流 POST 測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .preset-buttons { margin-bottom: 20px; }
+        .preset-buttons button { margin-right: 10px; margin-bottom: 10px; background: #28a745; }
+        .result { margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🧪 模擬歐買尬金流 POST 測試</h1>
+
+    <div class="warning">
+        <strong>⚠️ 注意：</strong>這個頁面僅用於測試，使用完請刪除！
+    </div>
+
+    <div class="preset-buttons">
+        <h3>快速預設資料：</h3>
+        <button onclick="setATMSuccess()">ATM 付款成功</button>
+        <button onclick="setCreditSuccess()">信用卡付款成功</button>
+        <button onclick="setATMFailed()">ATM 付款失敗</button>
+        <button onclick="setSimulate()">模擬付款</button>
+    </div>
+
+    <form id="testForm">
+        <div class="form-group">
+            <label>目標 PHP 檔案：</label>
+            <select id="targetUrl">
+                <option value="atm_payment_notify.php">ATM 付款通知</option>
+                <option value="funpoint_payment_notify.php">信用卡付款通知</option>
+                <option value="test_receive.php">簡單測試檔案</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>MerchantID：</label>
+            <input type="text" id="MerchantID" value="1020977">
+        </div>
+
+        <div class="form-group">
+            <label>MerchantTradeNo：</label>
+            <input type="text" id="MerchantTradeNo" value="TEST20250731001">
+        </div>
+
+        <div class="form-group">
+            <label>RtnCode (1=成功, 其他=失敗)：</label>
+            <input type="text" id="RtnCode" value="1">
+        </div>
+
+        <div class="form-group">
+            <label>RtnMsg：</label>
+            <input type="text" id="RtnMsg" value="交易成功">
+        </div>
+
+        <div class="form-group">
+            <label>TradeNo：</label>
+            <input type="text" id="TradeNo" value="202507311234567890">
+        </div>
+
+        <div class="form-group">
+            <label>TradeAmt：</label>
+            <input type="number" id="TradeAmt" value="500">
+        </div>
+
+        <div class="form-group">
+            <label>PaymentDate：</label>
+            <input type="text" id="PaymentDate" value="">
+        </div>
+
+        <div class="form-group">
+            <label>PaymentType：</label>
+            <input type="text" id="PaymentType" value="ATM_CHINATRUST">
+        </div>
+
+        <div class="form-group">
+            <label>CustomField1 (用戶帳號)：</label>
+            <input type="text" id="CustomField1" value="testuser">
+        </div>
+
+        <div class="form-group">
+            <label>SimulatePaid (1=模擬, 0=真實)：</label>
+            <input type="text" id="SimulatePaid" value="1">
+        </div>
+
+        <div class="form-group">
+            <label>CheckMacValue：</label>
+            <input type="text" id="CheckMacValue" value="TEST_CHECKSUM_VALUE">
+            <small>註：實際測試時需要正確的檢查碼</small>
+        </div>
+
+        <button type="button" onclick="sendTestData()">發送測試資料</button>
+        <button type="button" onclick="generateCurrentTime()">生成當前時間</button>
+    </form>
+
+    <div id="result" class="result" style="display:none;">
+        <h3>回應結果：</h3>
+        <div id="responseContent"></div>
+    </div>
+</div>
+
+<script>
+    // 生成當前時間
+    function generateCurrentTime() {
+        const now = new Date();
+        const timeStr = now.getFullYear() + '/' +
+                      (now.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                      now.getDate().toString().padStart(2, '0') + ' ' +
+                      now.getHours().toString().padStart(2, '0') + ':' +
+                      now.getMinutes().toString().padStart(2, '0') + ':' +
+                      now.getSeconds().toString().padStart(2, '0');
+        document.getElementById('PaymentDate').value = timeStr;
+    }
+
+    // 預設 ATM 成功資料
+    function setATMSuccess() {
+        document.getElementById('targetUrl').value = 'atm_payment_notify.php';
+        document.getElementById('MerchantTradeNo').value = 'ATM' + Date.now();
+        document.getElementById('RtnCode').value = '1';
+        document.getElementById('RtnMsg').value = '交易成功';
+        document.getElementById('PaymentType').value = 'ATM_CHINATRUST';
+        document.getElementById('SimulatePaid').value = '1';
+        generateCurrentTime();
+    }
+
+    // 預設信用卡成功資料
+    function setCreditSuccess() {
+        document.getElementById('targetUrl').value = 'funpoint_payment_notify.php';
+        document.getElementById('MerchantTradeNo').value = 'HE' + Date.now();
+        document.getElementById('RtnCode').value = '1';
+        document.getElementById('RtnMsg').value = '交易成功';
+        document.getElementById('PaymentType').value = 'Credit_CreditCard';
+        document.getElementById('SimulatePaid').value = '1';
+        generateCurrentTime();
+    }
+
+    // 預設 ATM 失敗資料
+    function setATMFailed() {
+        document.getElementById('targetUrl').value = 'atm_payment_notify.php';
+        document.getElementById('MerchantTradeNo').value = 'ATM' + Date.now();
+        document.getElementById('RtnCode').value = '0';
+        document.getElementById('RtnMsg').value = '付款失敗';
+        document.getElementById('PaymentType').value = 'ATM_CHINATRUST';
+        document.getElementById('SimulatePaid').value = '1';
+        generateCurrentTime();
+    }
+
+    // 預設模擬付款資料
+    function setSimulate() {
+        document.getElementById('MerchantTradeNo').value = 'SIM' + Date.now();
+        document.getElementById('RtnCode').value = '1';
+        document.getElementById('RtnMsg').value = '模擬付款成功';
+        document.getElementById('SimulatePaid').value = '1';
+        generateCurrentTime();
+    }
+
+    // 發送測試資料
+    async function sendTestData() {
+        const targetUrl = document.getElementById('targetUrl').value;
+
+        // 收集所有表單資料
+        const formData = new FormData();
+        const fields = [
+            'MerchantID', 'MerchantTradeNo', 'RtnCode', 'RtnMsg',
+            'TradeNo', 'TradeAmt', 'PaymentDate', 'PaymentType',
+            'CustomField1', 'SimulatePaid', 'CheckMacValue'
+        ];
+
+        fields.forEach(field => {
+            const value = document.getElementById(field).value;
+            if (value) {
+                formData.append(field, value);
+            }
+        });
+
+        // 顯示發送的資料
+        console.log('發送資料到:', targetUrl);
+        for (let [key, value] of formData.entries()) {
+            console.log(key, ':', value);
+        }
+
+        try {
+            const response = await fetch(targetUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const responseText = await response.text();
+
+            // 顯示結果
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('responseContent').innerHTML = `
+                <strong>HTTP 狀態:</strong> ${response.status}<br>
+                <strong>回應內容:</strong> <code>${responseText}</code><br>
+                <strong>時間:</strong> ${new Date().toLocaleString()}
+            `;
+
+            console.log('回應:', responseText);
+
+        } catch (error) {
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('responseContent').innerHTML = `
+                <strong style="color: red;">錯誤:</strong> ${error.message}
+            `;
+            console.error('請求失敗:', error);
+        }
+    }
+
+    // 頁面載入時生成當前時間
+    document.addEventListener('DOMContentLoaded', function() {
+        generateCurrentTime();
+    });
+</script>
+</body>
+</html>
