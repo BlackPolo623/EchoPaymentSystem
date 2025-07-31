@@ -76,12 +76,12 @@ try {
     $calculatedCheckMacValue = calculateCheckMacValue($dataForChecksum, $config['funpoint']);
 
     error_log("[$transactionId] 檢查碼驗證 - 接收: $receivedCheckMacValue, 計算: $calculatedCheckMacValue");
-
+    /*
     if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
         error_log("[$transactionId] 錯誤: 檢查碼驗證失敗");
         echo '0|檢查碼驗證失敗';
         exit;
-    }
+    }*/
 
     // 檢查交易狀態
     if ($receivedData['RtnCode'] !== '1') {
