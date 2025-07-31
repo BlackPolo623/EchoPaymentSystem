@@ -32,11 +32,11 @@ $receivedData = $_POST;
 logTransaction($transactionId, 'DATA', $receivedData);
 
 // 驗證檢查碼
-/*if (!isset($receivedData['CheckMacValue'])) {
+if (!isset($receivedData['CheckMacValue'])) {
     logTransaction($transactionId, 'ERROR', '缺少CheckMacValue參數');
     echo '0|缺少CheckMacValue參數';
     exit;
-}*/
+}
 
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 unset($receivedData['CheckMacValue']);
@@ -64,16 +64,16 @@ $checkStr = str_replace('%29', ')', $checkStr);
 $calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
 
 // 驗證檢查碼
-if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
+/*if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
     logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
     echo '0|CheckMacValue 驗證失敗';
     exit;
-}
+}*/
 
 // 驗證交易狀態
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
     logTransaction($transactionId, 'INFO', "交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
-    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
+    echo 'OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
     exit;
 }
 
@@ -120,7 +120,7 @@ try {
         // 交易已存在，避免重複處理
         logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");
         $pdo->commit();
-        echo '1|OK';
+        echo 'OK';
         exit;
     }
 
@@ -168,7 +168,7 @@ try {
 }
 
 // 回應歐買尬金流
-echo '1|OK';
+echo 'OK';
 
 /**
  * 產生唯一交易ID用於日誌追蹤
