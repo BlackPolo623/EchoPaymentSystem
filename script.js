@@ -180,7 +180,7 @@ function processCreditPayment(account, amount) {
                            now.getMinutes().toString().padStart(2, '0') + ":" +
                            now.getSeconds().toString().padStart(2, '0');
 
-    // 組裝訂單參數 - 信用卡專用
+    // 組裝訂單參數 - 完全按照舊版
     const params = {
         MerchantID: CONFIG.funpoint.MerchantID,
         MerchantTradeNo: merchantTradeNo,
@@ -190,7 +190,7 @@ function processCreditPayment(account, amount) {
         TradeDesc: "腳本開發服務",
         ItemName: "腳本開發服務",
         ReturnURL: CONFIG.funpoint.ReturnURL,
-        ChoosePayment: "Credit", // 固定為 Credit
+        ChoosePayment: "Credit",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
         OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
@@ -200,18 +200,10 @@ function processCreditPayment(account, amount) {
     // 計算檢查碼
     params.CheckMacValue = generateCheckMacValue(params);
 
-    // 設置表單值
+    // 設置表單值 - 完全按照舊版，不清空表單
     const form = document.getElementById('funpoint-payment-form');
     form.action = CONFIG.funpoint.PaymentApiUrl;
 
-    // 清空表單
-    Array.from(form.elements).forEach(element => {
-        if (element.type === 'hidden') {
-            element.value = '';
-        }
-    });
-
-    // 設置信用卡參數
     for (const key in params) {
         if (form.elements[key]) {
             form.elements[key].value = params[key];
