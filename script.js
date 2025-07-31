@@ -16,9 +16,9 @@ const CONFIG = {
         OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php",
         // 新增這兩行
         // ATM 專用設定都正確
-            ATMReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_notify.php",      // 付款完成通知
-            PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",      // 取號完成通知
-            ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"        // 用戶看到的頁面
+        ATMReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_notify.php",      // 付款完成通知
+        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",      // 取號完成通知
+        ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"        // 用戶看到的頁面
         },
     // SmilePay設定
     smilepay: {
@@ -246,9 +246,9 @@ function processATMPayment(account, amount) {
         CustomField1: account,
         // ATM 專用參數
         ExpireDate: 3,
-        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
-        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
-        NeedExtraPaidInfo: "Y"
+        //PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
+        //ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
+        //NeedExtraPaidInfo: "Y"
     };
 
     // 計算檢查碼
