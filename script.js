@@ -1,6 +1,6 @@
 // 設定檔 - 所有配置集中管理
 const CONFIG = {
-    minAmount: 500,
+    minAmount: 100,
     apiEndpoints: {
         accountCheck: 'check_account.php'
     },
