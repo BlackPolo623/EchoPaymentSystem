@@ -1,13 +1,10 @@
 <?php
-// atm_payment_notify.php
-// ATM 付款完成通知處理 (ReturnURL)
+/**
+ * 歐買尬金流付款結果通知接收處理程式
+ * 用於接收歐買尬金流的 Server POST 付款結果通知
+ */
 
-// 設置錯誤日誌
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
-ini_set('error_log', 'atm_payment_errors.log');
-
-// 載入配置
+// 設定檔
 $config = [
     'db' => [
         'host' => '125.228.68.9',
@@ -23,208 +20,213 @@ $config = [
     ]
 ];
 
-// 開始記錄交易
-$transactionId = generateTransactionId();
-logTransaction($transactionId, 'START', '接收到 ATM 付款完成通知');
-
-// 記錄所有接收到的資料（包括headers）
-$allData = [
-    'POST' => $_POST,
-    'GET' => $_GET,
-    'SERVER' => [
-        'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'] ?? '',
-        'CONTENT_TYPE' => $_SERVER['CONTENT_TYPE'] ?? '',
-        'HTTP_USER_AGENT' => $_SERVER['HTTP_USER_AGENT'] ?? ''
-    ],
-    'RAW_INPUT' => file_get_contents('php://input')
-];
-logTransaction($transactionId, 'ALL_DATA', $allData);
-
-// 接收回傳的資料
-$receivedData = $_POST;
-logTransaction($transactionId, 'POST_DATA', $receivedData);
-
-// 檢查是否有資料
-if (empty($receivedData)) {
-    logTransaction($transactionId, 'ERROR', 'POST資料為空，檢查RAW_INPUT: ' . file_get_contents('php://input'));
-    echo '0|POST資料為空';
-    exit;
+// 記錄 log 的函數
+function logTransaction($tradeNo, $status, $message, $data = null) {
+    $logFile = 'payment_log_' . date('Y-m-d') . '.txt';
+    $timestamp = date('Y-m-d H:i:s');
+    $logEntry = "[{$timestamp}] TradeNo: {$tradeNo} | Status: {$status} | Message: {$message}";
+    if ($data) {
+        $logEntry .= " | Data: " . json_encode($data, JSON_UNESCAPED_UNICODE);
+    }
+    $logEntry .= "\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
 }
 
-// 驗證檢查碼
-if (!isset($receivedData['CheckMacValue'])) {
-    logTransaction($transactionId, 'ERROR', '缺少CheckMacValue參數');
-    echo '0|缺少CheckMacValue參數';
-    exit;
+// 驗證檢查碼的函數
+function verifyCheckMacValue($params, $hashKey, $hashIV) {
+    // 移除 CheckMacValue 參數
+    $checkMacValue = $params['CheckMacValue'];
+    unset($params['CheckMacValue']);
+
+    // 依照英文字母排序參數
+    ksort($params);
+
+    // 組成查詢字串
+    $queryString = '';
+    foreach ($params as $key => $value) {
+        if ($queryString !== '') {
+            $queryString .= '&';
+        }
+        $queryString .= $key . '=' . $value;
+    }
+
+    // 加上 HashKey 和 HashIV
+    $queryString = 'HashKey=' . $hashKey . '&' . $queryString . '&HashIV=' . $hashIV;
+
+    // URL encode
+    $queryString = urlencode($queryString);
+
+    // 轉為小寫
+    $queryString = strtolower($queryString);
+
+    // PHP URL encode 字元替換 (符合 .NET 編碼規則)
+    $queryString = str_replace('%2d', '-', $queryString);
+    $queryString = str_replace('%5f', '_', $queryString);
+    $queryString = str_replace('%2e', '.', $queryString);
+    $queryString = str_replace('%21', '!', $queryString);
+    $queryString = str_replace('%2a', '*', $queryString);
+    $queryString = str_replace('%28', '(', $queryString);
+    $queryString = str_replace('%29', ')', $queryString);
+
+    // SHA256 加密並轉大寫
+    $generatedCheckMac = strtoupper(hash('sha256', $queryString));
+
+    return $generatedCheckMac === $checkMacValue;
 }
 
-$receivedCheckMacValue = $receivedData['CheckMacValue'];
-$checkData = $receivedData;
-unset($checkData['CheckMacValue']);
-
-// 排序參數並計算檢查碼
-ksort($checkData);
-$checkStr = "HashKey=" . $config['funpoint']['HashKey'];
-foreach ($checkData as $key => $value) {
-    $checkStr .= "&" . $key . "=" . $value;
-}
-$checkStr .= "&HashIV=" . $config['funpoint']['HashIV'];
-$checkStr = urlencode($checkStr);
-$checkStr = strtolower($checkStr);
-
-// 取代特殊字元
-$checkStr = str_replace('%2d', '-', $checkStr);
-$checkStr = str_replace('%5f', '_', $checkStr);
-$checkStr = str_replace('%2e', '.', $checkStr);
-$checkStr = str_replace('%21', '!', $checkStr);
-$checkStr = str_replace('%2a', '*', $checkStr);
-$checkStr = str_replace('%28', '(', $checkStr);
-$checkStr = str_replace('%29', ')', $checkStr);
-
-// 計算檢查碼
-$calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
-
-// 記錄檢查碼驗證過程
-logTransaction($transactionId, 'CHECKSUM_DEBUG', [
-    'received' => $receivedCheckMacValue,
-    'calculated' => $calculatedCheckMacValue,
-    'checkStr' => $checkStr
-]);
-
-// 驗證檢查碼
-if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
-    logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
-    echo '0|CheckMacValue 驗證失敗';
-    exit;
+// 從 CustomField1 取得帳號資訊
+function getAccountFromCustomField($customField1) {
+    // 帳號資訊存在 CustomField1 參數中
+    return !empty($customField1) ? trim($customField1) : null;
 }
 
-// 詳細記錄交易狀態資訊
-$rtnCode = $receivedData['RtnCode'] ?? 'missing';
-$paymentType = $receivedData['PaymentType'] ?? 'unknown';
-$simulatePaid = $receivedData['SimulatePaid'] ?? '0';
-
-logTransaction($transactionId, 'TRANSACTION_STATUS', [
-    'RtnCode' => $rtnCode,
-    'PaymentType' => $paymentType,
-    'SimulatePaid' => $simulatePaid,
-    'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? 'missing',
-    'TradeAmt' => $receivedData['TradeAmt'] ?? 'missing'
-]);
-
-// 驗證交易狀態 - ATM 付款成功時 RtnCode 應該是 1
-if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
-    logTransaction($transactionId, 'INFO', "ATM 交易未成功或仍在處理中: RtnCode={$rtnCode}");
-    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
-    exit;
+// 驗證交易編號格式 (用於額外驗證)
+function validateMerchantTradeNo($merchantTradeNo) {
+    // 檢查是否符合預期格式: HE + 17位數字 或 ATM + 17位數字
+    return preg_match('/^(HE|ATM)\d{17}$/', $merchantTradeNo);
 }
 
-// 1. 從自訂欄位取得用戶帳號
-$account = $receivedData['CustomField1'] ?? '';
-if (empty($account)) {
-    logTransaction($transactionId, 'ERROR', "找不到用戶帳號");
-    echo '0|找不到用戶帳號';
-    exit;
-}
-
-// 2. 獲取交易資料
-$merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
-$amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
-$remark = "歐買尬金流ATM付款 - " . date('Y-m-d H:i:s');
-
-// 驗證交易數據
-if (empty($merchantTradeNo) || $amount <= 0) {
-    logTransaction($transactionId, 'ERROR', "無效的交易數據: MerchantTradeNo={$merchantTradeNo}, amount={$amount}");
-    echo '0|無效的交易數據';
-    exit;
-}
-
-// 3. 處理交易
 try {
-    // 創建數據庫連接
+    // 建立資料庫連線
     $dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
-    $options = [
+    $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ];
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$config['db']['charset']}"
+    ]);
 
-    $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
+    // 記錄收到的原始資料
+    $rawInput = file_get_contents('php://input');
+    logTransaction('UNKNOWN', 'INFO', 'Raw input received', $rawInput);
 
-    // 開始交易
-    $pdo->beginTransaction();
+    // 檢查是否為 POST 請求
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        logTransaction('UNKNOWN', 'ERROR', 'Not a POST request');
+        echo '0|Invalid request method';
+        exit;
+    }
 
-    // 首先檢查該交易是否已經處理過
-    $stmt = $pdo->prepare("SELECT BillID FROM autodonater WHERE TradeNo = :tradeNo LIMIT 1");
-    $stmt->execute(['tradeNo' => $merchantTradeNo]);
+    // 取得 POST 參數
+    $postData = $_POST;
 
-    if ($stmt->rowCount() > 0) {
-        // 交易已存在，避免重複處理
-        logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");
-        $pdo->commit();
+    // 檢查必要參數是否存在
+    $requiredParams = ['MerchantID', 'MerchantTradeNo', 'RtnCode', 'RtnMsg', 'TradeNo', 'TradeAmt', 'PaymentDate', 'CheckMacValue'];
+    foreach ($requiredParams as $param) {
+        if (!isset($postData[$param])) {
+            logTransaction($postData['TradeNo'] ?? 'UNKNOWN', 'ERROR', "Missing required parameter: {$param}");
+            echo '0|Missing required parameter';
+            exit;
+        }
+    }
+
+    $merchantId = $postData['MerchantID'];
+    $merchantTradeNo = $postData['MerchantTradeNo'];
+    $rtnCode = (int)$postData['RtnCode'];
+    $rtnMsg = $postData['RtnMsg'];
+    $tradeNo = $postData['TradeNo'];
+    $tradeAmt = (int)$postData['TradeAmt'];
+    $paymentDate = $postData['PaymentDate'];
+    $simulatePaid = isset($postData['SimulatePaid']) ? (int)$postData['SimulatePaid'] : 0;
+    $customField1 = isset($postData['CustomField1']) ? $postData['CustomField1'] : '';
+
+    logTransaction($tradeNo, 'INFO', 'Payment notification received', $postData);
+
+    // 驗證交易編號格式
+    if (!validateMerchantTradeNo($merchantTradeNo)) {
+        logTransaction($tradeNo, 'WARNING', "Unexpected MerchantTradeNo format: {$merchantTradeNo}");
+    }
+
+    // 驗證檢查碼
+    if (!verifyCheckMacValue($postData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'])) {
+        logTransaction($tradeNo, 'ERROR', 'CheckMacValue verification failed');
+        echo '0|CheckMacValue verification failed';
+        exit;
+    }
+
+    logTransaction($tradeNo, 'INFO', 'CheckMacValue verification passed');
+
+    // 檢查是否為模擬付款
+    if ($simulatePaid == 1) {
+        logTransaction($tradeNo, 'WARNING', 'This is a simulated payment - do not deliver goods');
+        // 對於模擬付款，依然要回應成功，但不進行實際業務處理
         echo '1|OK';
         exit;
     }
 
-    // 驗證賬號是否存在
-    $stmt = $pdo->prepare("SELECT login FROM accounts WHERE login = :account LIMIT 1");
-    $stmt->execute(['account' => $account]);
-
-    if ($stmt->rowCount() == 0) {
-        // 賬號不存在
-        logTransaction($transactionId, 'ERROR', "賬號不存在: {$account}");
-        $pdo->rollBack();
-        echo '0|賬號不存在';
+    // 檢查交易狀態
+    if ($rtnCode !== 1) {
+        logTransaction($tradeNo, 'ERROR', "Transaction failed with code {$rtnCode}: {$rtnMsg}");
+        echo '1|OK'; // 依然要回應成功，表示已收到通知
         exit;
     }
 
-    // 插入交易記錄
-    $stmt = $pdo->prepare("
-        INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo)
-        VALUES (:money, :accountID, 1, :note, :tradeNo)
-    ");
+    // 開始資料庫交易
+    $pdo->beginTransaction();
 
-    $stmt->execute([
-        'money' => $amount,
-        'accountID' => $account,
-        'note' => $remark,
-        'tradeNo' => $merchantTradeNo
-    ]);
+    try {
+        // 檢查是否已經處理過這筆交易 (避免重複處理)
+        $stmt = $pdo->prepare("SELECT id FROM autodonater WHERE TradeNo = :tradeNo LIMIT 1");
+        $stmt->execute(['tradeNo' => $tradeNo]);
 
-    // 提交交易
-    $pdo->commit();
+        if ($stmt->rowCount() > 0) {
+            logTransaction($tradeNo, 'WARNING', 'Transaction already processed');
+            $pdo->rollBack();
+            echo '1|OK'; // 已處理過，回應成功
+            exit;
+        }
 
-    // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流ATM交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
+        // 從 CustomField1 取得帳號
+        $account = getAccountFromCustomField($customField1);
+        if (!$account) {
+            logTransaction($tradeNo, 'ERROR', "Cannot get account from CustomField1: {$customField1}");
+            $pdo->rollBack();
+            echo '0|Cannot get account information';
+            exit;
+        }
 
-} catch (PDOException $e) {
-    // 回滾交易
-    if (isset($pdo) && $pdo->inTransaction()) {
+        // 驗證賬號是否存在
+        $stmt = $pdo->prepare("SELECT login FROM accounts WHERE login = :account LIMIT 1");
+        $stmt->execute(['account' => $account]);
+
+        if ($stmt->rowCount() == 0) {
+            logTransaction($tradeNo, 'ERROR', "Account does not exist: {$account}");
+            $pdo->rollBack();
+            echo '0|Account does not exist';
+            exit;
+        }
+
+        // 寫入 autodonater 表
+        $paymentMethod = isset($postData['PaymentType']) ? $postData['PaymentType'] : 'Unknown';
+        $paymentTypePrefix = strpos($merchantTradeNo, 'ATM') === 0 ? 'ATM' : 'Credit Card';
+        $note = "Payment via OMG ({$paymentTypePrefix}) - TradeNo: {$tradeNo}, MerchantTradeNo: {$merchantTradeNo}, PaymentDate: {$paymentDate}, PaymentType: {$paymentMethod}";
+
+        $stmt = $pdo->prepare("INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo) VALUES (:money, :accountID, 1, :note, :tradeNo)");
+        $stmt->execute([
+            'money' => $tradeAmt,
+            'accountID' => $account,
+            'note' => $note,
+            'tradeNo' => $tradeNo
+        ]);
+
+        // 提交交易
+        $pdo->commit();
+
+        logTransaction($tradeNo, 'SUCCESS', "Payment processed successfully for account: {$account}, amount: {$tradeAmt}");
+
+        // 回應成功
+        echo '1|OK';
+
+    } catch (Exception $e) {
         $pdo->rollBack();
+        logTransaction($tradeNo, 'ERROR', 'Database transaction failed: ' . $e->getMessage());
+        echo '0|Database error';
     }
 
-    // 記錄錯誤
-    logTransaction($transactionId, 'ERROR', "數據庫錯誤: " . $e->getMessage());
-    echo '0|數據庫錯誤';
-    exit;
-}
-
-// 回應歐買尬金流
-echo '1|OK';
-
-/**
- * 產生唯一交易ID用於日誌追蹤
- */
-function generateTransactionId() {
-    return 'ATM_PAY_' . date('YmdHis') . '_' . substr(md5(uniqid()), 0, 8);
-}
-
-/**
- * 記錄交易日誌
- */
-function logTransaction($transactionId, $status, $data) {
-    $timestamp = date('Y-m-d H:i:s');
-    $dataStr = is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $data;
-    $logMessage = "[$timestamp][$transactionId][$status] $dataStr\n";
-    file_put_contents('atm_payment_notify.log', $logMessage, FILE_APPEND);
+} catch (PDOException $e) {
+    logTransaction('UNKNOWN', 'ERROR', 'Database connection failed: ' . $e->getMessage());
+    echo '0|Database connection error';
+} catch (Exception $e) {
+    logTransaction('UNKNOWN', 'ERROR', 'Unexpected error: ' . $e->getMessage());
+    echo '0|Server error';
 }
 ?>

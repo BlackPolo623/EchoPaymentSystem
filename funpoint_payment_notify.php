@@ -184,6 +184,6 @@ function logTransaction($transactionId, $status, $data) {
     $timestamp = date('Y-m-d H:i:s');
     $dataStr = is_array($data) ? json_encode($data) : $data;
     $logMessage = "[$timestamp][$transactionId][$status] $dataStr\n";
-    file_put_contents('funpoint_payment_notify.log', $logMessage, FILE_APPEND);
+    file_put_contents(__DIR__ .'funpoint_payment_notify.log', $logMessage, FILE_APPEND);
 }
 ?>
