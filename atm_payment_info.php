@@ -57,11 +57,11 @@ $checkStr = str_replace('%29', ')', $checkStr);
 $calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
 
 // 驗證檢查碼
-/*if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
+if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
     logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
     echo '0|CheckMacValue 驗證失敗';
     exit;
-}*/
+}
 
 // 檢查取號是否成功
 // 根據文件：ATM 回傳值為 2 時，交易狀態為取號成功
