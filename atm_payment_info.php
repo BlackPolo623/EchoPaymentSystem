@@ -1,6 +1,6 @@
 <?php
 // atm_payment_info.php
-// ATM 取號完成通知處理 (PaymentInfoURL)
+// ATM 取號完成通知處理 (PaymentInfoURL) - 簡化版
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -9,14 +9,6 @@ ini_set('error_log', 'atm_payment_info_errors.log');
 
 // 載入配置
 $config = [
-    'db' => [
-        'host' => '125.228.68.9',
-        'port' => '3306',
-        'name' => 'l2jmobius_fafurion',
-        'user' => 'payment',
-        'pass' => 'x4ci3i7q',
-        'charset' => 'utf8mb4'
-    ],
     'funpoint' => [
         'HashKey' => 'cUHKRU04BaDCprxJ',
         'HashIV' => 'tpYEKUQ8D57JyDo0'
@@ -75,11 +67,11 @@ if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
 // 根據文件：ATM 回傳值為 2 時，交易狀態為取號成功
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '2') {
     logTransaction($transactionId, 'INFO', "ATM 取號未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
-    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
+    echo '1|OK';
     exit;
 }
 
-// 取得必要資料
+// 記錄取號成功，但不存入資料庫
 $account = $receivedData['CustomField1'] ?? '';
 $merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
 $amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
@@ -87,96 +79,9 @@ $bankCode = $receivedData['BankCode'] ?? '';
 $vAccount = $receivedData['vAccount'] ?? '';
 $expireDate = $receivedData['ExpireDate'] ?? '';
 
-// 驗證資料
-if (empty($account) || empty($merchantTradeNo) || $amount <= 0) {
-    logTransaction($transactionId, 'ERROR', "資料不完整: account={$account}, merchantTradeNo={$merchantTradeNo}, amount={$amount}");
-    echo '0|資料不完整';
-    exit;
-}
+logTransaction($transactionId, 'SUCCESS', "ATM 取號成功: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}, 虛擬帳號: {$vAccount}");
 
-try {
-    // 創建數據庫連接
-    $dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
-    $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ];
-
-    $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
-    $pdo->beginTransaction();
-
-    // 檢查是否已記錄過此取號
-    $checkStmt = $pdo->prepare("SELECT id FROM atm_virtual_accounts WHERE MerchantTradeNo = :tradeNo LIMIT 1");
-    $checkStmt->execute(['tradeNo' => $merchantTradeNo]);
-
-    if ($checkStmt->rowCount() > 0) {
-        logTransaction($transactionId, 'INFO', "ATM 取號記錄已存在: {$merchantTradeNo}");
-        $pdo->commit();
-        echo '1|OK';
-        exit;
-    }
-
-    // 驗證賬號是否存在
-    $accountStmt = $pdo->prepare("SELECT login FROM accounts WHERE login = :account LIMIT 1");
-    $accountStmt->execute(['account' => $account]);
-
-    if ($accountStmt->rowCount() == 0) {
-        logTransaction($transactionId, 'ERROR', "賬號不存在: {$account}");
-        $pdo->rollBack();
-        echo '0|賬號不存在';
-        exit;
-    }
-
-    // 創建 ATM 虛擬帳號記錄表（如果不存在）
-    $createTableSQL = "
-    CREATE TABLE IF NOT EXISTS atm_virtual_accounts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        MerchantTradeNo VARCHAR(50) NOT NULL UNIQUE,
-        accountID VARCHAR(50) NOT NULL,
-        amount INT NOT NULL,
-        BankCode VARCHAR(10),
-        vAccount VARCHAR(20),
-        ExpireDate VARCHAR(30),
-        status ENUM('pending', 'paid', 'expired') DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        paid_at TIMESTAMP NULL,
-        INDEX idx_trade_no (MerchantTradeNo),
-        INDEX idx_account (accountID)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ";
-    $pdo->exec($createTableSQL);
-
-    // 記錄 ATM 虛擬帳號資訊
-    $insertStmt = $pdo->prepare("
-        INSERT INTO atm_virtual_accounts
-        (MerchantTradeNo, accountID, amount, BankCode, vAccount, ExpireDate, status)
-        VALUES (:tradeNo, :accountID, :amount, :bankCode, :vAccount, :expireDate, 'pending')
-    ");
-
-    $insertStmt->execute([
-        'tradeNo' => $merchantTradeNo,
-        'accountID' => $account,
-        'amount' => $amount,
-        'bankCode' => $bankCode,
-        'vAccount' => $vAccount,
-        'expireDate' => $expireDate
-    ]);
-
-    $pdo->commit();
-
-    logTransaction($transactionId, 'SUCCESS', "成功記錄 ATM 取號: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}, 虛擬帳號: {$vAccount}");
-
-} catch (PDOException $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    logTransaction($transactionId, 'ERROR', "資料庫錯誤: " . $e->getMessage());
-    echo '0|資料庫錯誤';
-    exit;
-}
-
-// 回應金流平台
+// 直接回應金流平台，不做任何資料庫操作
 echo '1|OK';
 
 /**

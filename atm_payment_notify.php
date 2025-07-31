@@ -139,13 +139,7 @@ try {
         exit;
     }
 
-    // 更新 ATM 虛擬帳號狀態為已付款（如果記錄存在）
-    $updateATMStmt = $pdo->prepare("
-        UPDATE atm_virtual_accounts
-        SET status = 'paid', paid_at = NOW()
-        WHERE MerchantTradeNo = :tradeNo AND status = 'pending'
-    ");
-    $updateATMStmt->execute(['tradeNo' => $merchantTradeNo]);
+    // 移除虛擬帳號狀態更新，直接處理付款
 
     // 插入交易記錄到 autodonater 表
     $stmt = $pdo->prepare("
