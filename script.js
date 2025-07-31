@@ -169,49 +169,49 @@ async function recordPayment() {
 
 function processCreditPayment(account, amount) {
     // 生成交易編號 (需確保不重複)
-    const merchantTradeNo = "HE" + generateUniqueId();
+        const merchantTradeNo = "HE" + generateUniqueId();
 
-    // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
-    const now = new Date();
-    const merchantTradeDate = now.getFullYear() + "/" +
-                           (now.getMonth() + 1).toString().padStart(2, '0') + "/" +
-                           now.getDate().toString().padStart(2, '0') + " " +
-                           now.getHours().toString().padStart(2, '0') + ":" +
-                           now.getMinutes().toString().padStart(2, '0') + ":" +
-                           now.getSeconds().toString().padStart(2, '0');
+        // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
+        const now = new Date();
+        const merchantTradeDate = now.getFullYear() + "/" +
+                               (now.getMonth() + 1).toString().padStart(2, '0') + "/" +
+                               now.getDate().toString().padStart(2, '0') + " " +
+                               now.getHours().toString().padStart(2, '0') + ":" +
+                               now.getMinutes().toString().padStart(2, '0') + ":" +
+                               now.getSeconds().toString().padStart(2, '0');
 
-    // 組裝訂單參數 - 完全按照舊版
-    const params = {
-        MerchantID: CONFIG.funpoint.MerchantID,
-        MerchantTradeNo: merchantTradeNo,
-        MerchantTradeDate: merchantTradeDate,
-        PaymentType: "aio",
-        TotalAmount: amount,
-        TradeDesc: "腳本開發服務",
-        ItemName: "腳本開發服務",
-        ReturnURL: CONFIG.funpoint.ReturnURL,
-        ChoosePayment: "Credit",
-        ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        OrderResultURL: CONFIG.funpoint.OrderResultURL,
-        EncryptType: "1",
-        CustomField1: account
-    };
+        // 組裝訂單參數
+         const params = {
+                MerchantID: CONFIG.funpoint.MerchantID,
+                MerchantTradeNo: merchantTradeNo,
+                MerchantTradeDate: merchantTradeDate,
+                PaymentType: "aio",
+                TotalAmount: amount,
+                TradeDesc: "腳本開發服務",
+                ItemName: "腳本開發服務",
+                ReturnURL: CONFIG.funpoint.ReturnURL,
+                ChoosePayment: "Credit",
+                ClientBackURL: CONFIG.funpoint.ClientBackURL,
+                OrderResultURL: CONFIG.funpoint.OrderResultURL,
+                EncryptType: "1",
+                CustomField1: account
+            };
 
-    // 計算檢查碼
-    params.CheckMacValue = generateCheckMacValue(params);
+        // 計算檢查碼
+        params.CheckMacValue = generateCheckMacValue(params);
 
-    // 設置表單值 - 完全按照舊版，不清空表單
-    const form = document.getElementById('funpoint-payment-form');
-    form.action = CONFIG.funpoint.PaymentApiUrl;
+        // 設置表單值
+        const form = document.getElementById('funpoint-payment-form');
+        form.action = CONFIG.funpoint.PaymentApiUrl;
 
-    for (const key in params) {
-        if (form.elements[key]) {
-            form.elements[key].value = params[key];
+        for (const key in params) {
+            if (form.elements[key]) {
+                form.elements[key].value = params[key];
+            }
         }
-    }
 
-    // 提交表單
-    form.submit();
+        // 提交表單
+        form.submit();
 }
 
 function processATMPayment(account, amount) {
