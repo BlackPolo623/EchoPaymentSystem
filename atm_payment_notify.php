@@ -27,9 +27,29 @@ $config = [
 $transactionId = generateTransactionId();
 logTransaction($transactionId, 'START', '接收到 ATM 付款完成通知');
 
+// 記錄所有接收到的資料（包括headers）
+$allData = [
+    'POST' => $_POST,
+    'GET' => $_GET,
+    'SERVER' => [
+        'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'] ?? '',
+        'CONTENT_TYPE' => $_SERVER['CONTENT_TYPE'] ?? '',
+        'HTTP_USER_AGENT' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+    ],
+    'RAW_INPUT' => file_get_contents('php://input')
+];
+logTransaction($transactionId, 'ALL_DATA', $allData);
+
 // 接收回傳的資料
 $receivedData = $_POST;
-logTransaction($transactionId, 'DATA', $receivedData);
+logTransaction($transactionId, 'POST_DATA', $receivedData);
+
+// 檢查是否有資料
+if (empty($receivedData)) {
+    logTransaction($transactionId, 'ERROR', 'POST資料為空，檢查RAW_INPUT: ' . file_get_contents('php://input'));
+    echo '0|POST資料為空';
+    exit;
+}
 
 // 驗證檢查碼
 if (!isset($receivedData['CheckMacValue'])) {
@@ -64,6 +84,13 @@ $checkStr = str_replace('%29', ')', $checkStr);
 // 計算檢查碼
 $calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
 
+// 記錄檢查碼驗證過程
+logTransaction($transactionId, 'CHECKSUM_DEBUG', [
+    'received' => $receivedCheckMacValue,
+    'calculated' => $calculatedCheckMacValue,
+    'checkStr' => $checkStr
+]);
+
 // 驗證檢查碼
 if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
     logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
@@ -71,9 +98,22 @@ if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
     exit;
 }
 
+// 詳細記錄交易狀態資訊
+$rtnCode = $receivedData['RtnCode'] ?? 'missing';
+$paymentType = $receivedData['PaymentType'] ?? 'unknown';
+$simulatePaid = $receivedData['SimulatePaid'] ?? '0';
+
+logTransaction($transactionId, 'TRANSACTION_STATUS', [
+    'RtnCode' => $rtnCode,
+    'PaymentType' => $paymentType,
+    'SimulatePaid' => $simulatePaid,
+    'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? 'missing',
+    'TradeAmt' => $receivedData['TradeAmt'] ?? 'missing'
+]);
+
 // 驗證交易狀態 - ATM 付款成功時 RtnCode 應該是 1
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
-    logTransaction($transactionId, 'INFO', "ATM 交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
+    logTransaction($transactionId, 'INFO', "ATM 交易未成功或仍在處理中: RtnCode={$rtnCode}");
     echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
     exit;
 }
@@ -89,7 +129,7 @@ if (empty($account)) {
 // 2. 獲取交易資料
 $merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
 $amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
-$remark = "歐買尬金流付款 - " . date('Y-m-d H:i:s');
+$remark = "歐買尬金流ATM付款 - " . date('Y-m-d H:i:s');
 
 // 驗證交易數據
 if (empty($merchantTradeNo) || $amount <= 0) {
@@ -121,7 +161,7 @@ try {
         // 交易已存在，避免重複處理
         logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");
         $pdo->commit();
-        echo 'OK';
+        echo '1|OK';
         exit;
     }
 
@@ -154,7 +194,7 @@ try {
     $pdo->commit();
 
     // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
+    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流ATM交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
 
 } catch (PDOException $e) {
     // 回滾交易
@@ -169,7 +209,7 @@ try {
 }
 
 // 回應歐買尬金流
-echo 'OK';
+echo '1|OK';
 
 /**
  * 產生唯一交易ID用於日誌追蹤
@@ -183,7 +223,7 @@ function generateTransactionId() {
  */
 function logTransaction($transactionId, $status, $data) {
     $timestamp = date('Y-m-d H:i:s');
-    $dataStr = is_array($data) ? json_encode($data) : $data;
+    $dataStr = is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $data;
     $logMessage = "[$timestamp][$transactionId][$status] $dataStr\n";
     file_put_contents('atm_payment_notify.log', $logMessage, FILE_APPEND);
 }
