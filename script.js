@@ -236,8 +236,8 @@ function processATMPayment(account, amount) {
         MerchantTradeDate: merchantTradeDate,
         PaymentType: "aio",
         TotalAmount: amount,
-        TradeDesc: "腳本開發服務2",
-        ItemName: "腳本開發服務2",
+        TradeDesc: "腳本開發服務2" + CONFIG.funpoint.ATMReturnURL,
+        ItemName: "腳本開發服務2" + CONFIG.funpoint.ATMReturnURL,
         ReturnURL: CONFIG.funpoint.ATMReturnURL,
         ChoosePayment: "ATM", // 固定為 ATM
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
