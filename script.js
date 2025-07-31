@@ -245,11 +245,12 @@ function processATMPayment(account, amount) {
         CustomField1: account,
         // ATM 專用參數
         ExpireDate: 3,
-        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
-        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
-        NeedExtraPaidInfo: "Y"
+
     };
 
+    params.PaymentInfoURL = CONFIG.funpoint.PaymentInfoURL,
+    params.ClientRedirectURL = CONFIG.funpoint.ClientRedirectURL,
+    params.NeedExtraPaidInfo = "Y"
     // 計算檢查碼
     params.CheckMacValue = generateCheckMacValue(params);
 
