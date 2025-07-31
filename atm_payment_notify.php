@@ -23,6 +23,21 @@ $config = [
     ]
 ];
 
+// 創建數據庫連接
+$dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
+$options = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES => false,
+];
+
+$pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
+
+$jsonData = json_encode($_POST, JSON_UNESCAPED_UNICODE);
+$stmt = $pdo->prepare("INSERT INTO test (debug) VALUES (:val)");
+$stmt->bindValue(':val', $jsonData, PDO::PARAM_STR);
+$stmt->execute();
+
 // 開始記錄交易
 $transactionId = generateTransactionId();
 logTransaction($transactionId, 'START', '接收到 ATM 付款完成通知');
