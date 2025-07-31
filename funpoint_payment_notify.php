@@ -1,16 +1,5 @@
 <?php
 // funpoint_payment_notify.php
-// 這個檔案接收歐買尬金流的 Server 端通知
-// 強制記錄所有接收到的資料
-$allData = array_merge($_GET, $_POST);
-logTransaction('DEBUG', 'ALL_RECEIVED_DATA', $allData);
-
-// 檢查是否收到任何資料
-if (empty($allData)) {
-    logTransaction('ERROR', 'NO_DATA', 'PHP 沒有接收到任何 POST 或 GET 資料');
-    echo '0|沒有接收到資料';
-    exit;
-}
 // 設置錯誤日誌
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
