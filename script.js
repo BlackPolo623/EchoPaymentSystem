@@ -129,7 +129,10 @@ async function recordPayment() {
         
         if (payMethod === 'credit') {
             // 使用歐買尬金流處理信用卡付款
-            processFunpointPayment(account, amount);
+            processFunpointPayment(account, amount, 'Credit');
+        } else if (payMethod === 'ATM') {
+            // 使用歐買尬金流處理ATM虛擬帳號轉帳
+            processFunpointPayment(account, amount, 'ATM');
         } else {
             // 使用SmilePay支付方式處理
             const uniqueId = generateUniqueId();
@@ -161,7 +164,7 @@ async function recordPayment() {
     }
 }
 
-function processFunpointPayment(account, amount) {
+function processFunpointPayment(account, amount, paymentMethod = 'Credit') {
     // 生成交易編號 (需確保不重複)
     const merchantTradeNo = "HE" + generateUniqueId();
     
@@ -184,12 +187,17 @@ function processFunpointPayment(account, amount) {
             TradeDesc: "腳本開發服務",
             ItemName: "腳本開發服務",
             ReturnURL: CONFIG.funpoint.ReturnURL,
-            ChoosePayment: "Credit",
+            ChoosePayment: paymentMethod,
             ClientBackURL: CONFIG.funpoint.ClientBackURL,
             OrderResultURL: CONFIG.funpoint.OrderResultURL,
             EncryptType: "1",
             CustomField1: account
         };
+
+     // ATM支付的額外參數
+     if (paymentMethod === 'ATM') {
+         params.ExpireDate = 3; // ATM 繳費期限 3 天
+     }
     
     // 計算檢查碼
     params.CheckMacValue = generateCheckMacValue(params);
