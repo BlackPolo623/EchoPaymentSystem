@@ -13,7 +13,7 @@ const CONFIG = {
         // 請更換為實際網站網址
         ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php",
         ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
-        OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php"
+        OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php",
         // 新增這兩行
         PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",
         ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"
