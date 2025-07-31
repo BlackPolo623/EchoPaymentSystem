@@ -76,7 +76,11 @@ if (!isset($receivedData['RtnCode'])) {
     echo '0|缺少 RtnCode';
     exit;
 }
-
+if ($receivedData['RtnCode'] !== '1') {
+    // 可選：記錄 log（例如收到取號成功 RtnCode == 2）
+    logTransaction($transactionId, 'INFO', "忽略未付款的通知: RtnCode=" . $receivedData['RtnCode']);
+    return; // 結束當前請求，但不中止伺服器執行（不 exit）
+}
 // 1. 從自訂欄位取得用戶帳號
 $account = $receivedData['CustomField1'] ?? '';
 if (empty($account)) {
