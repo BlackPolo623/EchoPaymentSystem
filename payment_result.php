@@ -1,6 +1,6 @@
 <?php
 // payment_result.php
-// 這個頁面接收歐買尬金流的前端通知並顯示結果
+// 這個頁面接收歐買尬金流的前端通知並顯示結果（僅顯示，不執行資料庫操作）
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -9,14 +9,6 @@ ini_set('error_log', 'payment_errors.log');
 
 // 載入配置
 $config = [
-    'db' => [
-        'host' => '125.228.68.9',
-        'port' => '3306',
-        'name' => 'l2jmobius_fafurion',
-        'user' => 'payment',
-        'pass' => 'x4ci3i7q',
-        'charset' => 'utf8mb4'
-    ],
     'funpoint' => [
         'HashKey' => 'cUHKRU04BaDCprxJ',
         'HashIV' => 'tpYEKUQ8D57JyDo0'
@@ -67,7 +59,7 @@ if (!empty($receivedData) && isset($receivedData['CheckMacValue'])) {
     $isValidCheckMac = false;
 }
 
-// 獲取交易結果
+// 獲取交易結果 - 簡化版本，主要用於顯示
 $isSuccess = isset($receivedData['RtnCode']) && $receivedData['RtnCode'] === '1' && $isValidCheckMac;
 $amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
 $tradeNo = $receivedData['MerchantTradeNo'] ?? '';
@@ -78,83 +70,8 @@ if (empty($account) && isset($_GET['account'])) {
     $account = $_GET['account'];
 }
 
-// 如果帳號為空，提早結束
-if (empty($account)) {
-    $isSuccess = false;
-    error_log("[$logId] 賬號為空");
-}
-
-// 備註欄位處理
-$remark = "歐買尬金流付款 - " . date('Y-m-d H:i:s');
-
-// 如果交易成功，更新資料庫
-if ($isSuccess && !empty($account) && $amount > 0) {
-    try {
-        // 創建數據庫連接
-        $dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
-        $options = [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ];
-        
-        $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
-        
-        // 使用事務確保數據一致性
-        $pdo->beginTransaction();
-        
-        // 首先檢查該交易是否已經處理過
-        $stmt = $pdo->prepare("SELECT BillID FROM autodonater WHERE TradeNo = :tradeNo");
-        $stmt->execute(['tradeNo' => $tradeNo]);
-        
-        if ($stmt->rowCount() > 0) {
-            // 交易已存在，避免重複處理
-            error_log("[$logId] 交易已存在: {$tradeNo}");
-        } else {
-            // 驗證賬號是否存在
-            $stmt = $pdo->prepare("SELECT * FROM accounts WHERE login = :account");
-            $stmt->execute(['account' => $account]);
-            
-            if ($stmt->rowCount() == 0) {
-                // 賬號不存在
-                error_log("[$logId] 賬號不存在: {$account}");
-                $isSuccess = false;
-            } else {
-                // 插入交易記錄 - 與原 SmilePay 回調使用相同的表結構
-                $stmt = $pdo->prepare("
-                    INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo) 
-                    VALUES (:money, :accountID, 1, :note, :tradeNo)
-                ");
-                
-                $stmt->execute([
-                    'money' => $amount,
-                    'accountID' => $account,
-                    'note' => $remark,
-                    'tradeNo' => $tradeNo
-                ]);
-                
-                // 記錄成功日誌
-                error_log("[$logId] 成功處理歐買尬金流交易: {$tradeNo}, 賬號: {$account}, 金額: {$amount}");
-            }
-        }
-        
-        // 提交事務
-        $pdo->commit();
-        
-    } catch (PDOException $e) {
-        // 回滾事務
-        if (isset($pdo) && $pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        
-        // 記錄錯誤
-        error_log("[$logId] 數據庫錯誤: " . $e->getMessage());
-        $isSuccess = false; // 數據庫錯誤時，將交易視為失敗
-    }
-}
-
-// 記錄結果
-error_log("[$logId] 處理結果: " . ($isSuccess ? '成功' : '失敗'));
+// 記錄結果（僅記錄，不執行資料庫操作）
+error_log("[$logId] 頁面顯示結果: " . ($isSuccess ? '成功' : '失敗') . " - 帳號: {$account}, 金額: {$amount}");
 ?>
 <!DOCTYPE html>
 <html lang="zh-TW">
