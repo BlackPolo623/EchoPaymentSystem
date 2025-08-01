@@ -16,7 +16,7 @@ const CONFIG = {
         OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php",
         // 新增這兩行
         // ATM 專用設定都正確
-        ATMReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_notify.php",      // 付款完成通知
+        //ATMReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_notify.php",      // 付款完成通知
         PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",      // 取號完成通知
         ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"        // 用戶看到的頁面
         },
@@ -238,7 +238,7 @@ function processATMPayment(account, amount) {
         TotalAmount: amount,
         TradeDesc: "腳本開發服務",
         ItemName: "腳本開發服務",
-        ReturnURL: CONFIG.funpoint.ATMReturnURL,
+        ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "ATM", // 固定為 ATM
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
         //OrderResultURL: CONFIG.funpoint.OrderResultURL,
