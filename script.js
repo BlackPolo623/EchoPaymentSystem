@@ -242,7 +242,7 @@ function processATMPayment(account, amount) {
         OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: account,
-        // ATM 專用參數
+        // ATM 專用參數 1
         ExpireDate: 3,
         //PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
         //ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
