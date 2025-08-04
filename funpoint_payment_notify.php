@@ -1,6 +1,6 @@
 <?php
 // funpoint_payment_notify.php
-// 重新設計，完全按照官方文件規範處理歐買尬金流通知
+// 重新理解：使用回傳參數進行檢查碼驗證
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -40,16 +40,12 @@ if (!isset($receivedData['CheckMacValue'])) {
 
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 
-// 判斷付款方式並重建送出時的參數
+// 判斷付款方式
 $paymentType = detectPaymentType($receivedData);
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
-// 重建送出時的參數結構
-$originalParams = rebuildOriginalParams($receivedData, $paymentType);
-logTransaction($transactionId, 'DEBUG', "Rebuilt original parameters: " . json_encode($originalParams, JSON_UNESCAPED_UNICODE));
-
-// 按照官方規範計算檢查碼
-$calculatedCheckMacValue = calculateCheckMacValueOfficial($originalParams, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
+// 關鍵修正：使用回傳的參數進行檢查碼計算，但要過濾正確的參數
+$calculatedCheckMacValue = calculateCheckMacValueFromResponse($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId, $paymentType);
 
 logTransaction($transactionId, 'DEBUG', "CheckMacValue comparison - Received: {$receivedCheckMacValue}, Calculated: {$calculatedCheckMacValue}");
 
@@ -183,66 +179,30 @@ function detectPaymentType($data) {
 }
 
 /**
- * 重建送出時的原始參數結構
- * 根據前端HTML表單的欄位重建
+ * 使用回傳參數計算檢查碼，但根據付款方式過濾參數
  */
-function rebuildOriginalParams($receivedData, $paymentType) {
-    $params = [];
+function calculateCheckMacValueFromResponse($receivedData, $hashKey, $hashIV, $transactionId, $paymentType) {
+    // 移除CheckMacValue參數
+    $params = $receivedData;
+    unset($params['CheckMacValue']);
 
-    if ($paymentType === 'ATM') {
-        // ATM表單的16個參數（根據HTML中的funpoint-ATMpayment-form）
-        $params['MerchantID'] = '1020977';
-        $params['MerchantTradeNo'] = $receivedData['MerchantTradeNo'] ?? '';
-        $params['MerchantTradeDate'] = $receivedData['TradeDate'] ?? '';
-        $params['PaymentType'] = 'aio';
-        $params['TotalAmount'] = $receivedData['TradeAmt'] ?? '';
-        $params['TradeDesc'] = '腳本開發服務';
-        $params['ItemName'] = '腳本開發服務';
-        $params['ReturnURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php';
-        $params['ChoosePayment'] = 'ATM';
-        $params['ClientBackURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html';
-        $params['EncryptType'] = '1';
-        $params['ExpireDate'] = '3';
-        $params['PaymentInfoURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php';
-        $params['ClientRedirectURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php';
-        $params['NeedExtraPaidInfo'] = 'Y';
-        $params['CustomField1'] = $receivedData['CustomField1'] ?? '';
-    } else {
-        // 信用卡表單的13個參數（根據HTML中的funpoint-payment-form）
-        $params['MerchantID'] = '1020977';
-        $params['MerchantTradeNo'] = $receivedData['MerchantTradeNo'] ?? '';
-        $params['MerchantTradeDate'] = $receivedData['TradeDate'] ?? '';
-        $params['PaymentType'] = 'aio';
-        $params['TotalAmount'] = $receivedData['TradeAmt'] ?? '';
-        $params['TradeDesc'] = '腳本開發服務';
-        $params['ItemName'] = '腳本開發服務';
-        $params['ReturnURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php';
-        $params['ChoosePayment'] = 'Credit';
-        $params['ClientBackURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html';
-        $params['OrderResultURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php';
-        $params['EncryptType'] = '1';
-        $params['CustomField1'] = $receivedData['CustomField1'] ?? '';
-    }
+    // 嘗試策略：使用所有回傳參數（包括空值）
+    logTransaction($transactionId, 'DEBUG', "Using ALL response parameters (including empty values)");
 
-    return $params;
+    logTransaction($transactionId, 'DEBUG', "Parameters for calculation: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+
+    // 按照官方規範計算檢查碼
+    return calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transactionId);
 }
 
 /**
- * 完全按照官方文件規範計算檢查碼
- * 8個步驟完全對應官方文件
+ * 按照官方文件規範計算檢查碼
  */
 function calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transactionId) {
-    // Step 1: 移除CheckMacValue參數（如果存在）
-    if (isset($params['CheckMacValue'])) {
-        unset($params['CheckMacValue']);
-    }
-
-    logTransaction($transactionId, 'DEBUG', "Step 1 - Parameters for calculation: " . json_encode($params, JSON_UNESCAPED_UNICODE));
-
-    // Step 2: 按照英文字母順序排序
+    // Step 1: 按照英文字母順序排序
     ksort($params);
 
-    // Step 3: 串連參數
+    // Step 2: 串連參數
     $paramString = '';
     foreach ($params as $key => $value) {
         if ($paramString !== '') {
@@ -251,24 +211,24 @@ function calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transaction
         $paramString .= $key . '=' . $value;
     }
 
-    logTransaction($transactionId, 'DEBUG', "Step 2 - Sorted parameter string: " . $paramString);
+    logTransaction($transactionId, 'DEBUG', "Step 1 - Sorted parameter string: " . $paramString);
 
-    // Step 4: 前面加HashKey，後面加HashIV
+    // Step 3: 前面加HashKey，後面加HashIV
     $checkString = "HashKey=" . $hashKey . "&" . $paramString . "&HashIV=" . $hashIV;
 
-    logTransaction($transactionId, 'DEBUG', "Step 3 - String with HashKey and HashIV: " . $checkString);
+    logTransaction($transactionId, 'DEBUG', "Step 2 - String with HashKey and HashIV: " . $checkString);
 
-    // Step 5: URL encode
+    // Step 4: URL encode
     $encodedString = urlencode($checkString);
 
-    logTransaction($transactionId, 'DEBUG', "Step 4 - URL encoded string: " . $encodedString);
+    logTransaction($transactionId, 'DEBUG', "Step 3 - URL encoded string: " . $encodedString);
 
-    // Step 6: 轉小寫
+    // Step 5: 轉小寫
     $lowerString = strtolower($encodedString);
 
-    logTransaction($transactionId, 'DEBUG', "Step 5 - Lowercase string: " . $lowerString);
+    logTransaction($transactionId, 'DEBUG', "Step 4 - Lowercase string: " . $lowerString);
 
-    // Step 7: 按照官方文件進行字元替換 (PHP專用)
+    // Step 6: 字元替換
     $replacedString = $lowerString;
     $str_replacements = [
         '%2d' => '-',
@@ -284,19 +244,14 @@ function calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transaction
         $replacedString = str_replace($search, $replace, $replacedString);
     }
 
-    logTransaction($transactionId, 'DEBUG', "Step 6 - After character replacement: " . $replacedString);
+    logTransaction($transactionId, 'DEBUG', "Step 5 - After character replacement: " . $replacedString);
 
-    // Step 8: SHA256加密
-    $hash = hash('sha256', $replacedString);
+    // Step 7: SHA256加密並轉大寫
+    $hash = strtoupper(hash('sha256', $replacedString));
 
-    logTransaction($transactionId, 'DEBUG', "Step 7 - SHA256 hash (lowercase): " . $hash);
+    logTransaction($transactionId, 'DEBUG', "Step 6 - Final CheckMacValue: " . $hash);
 
-    // Step 9: 轉大寫
-    $finalCheckMacValue = strtoupper($hash);
-
-    logTransaction($transactionId, 'DEBUG', "Step 8 - Final CheckMacValue (uppercase): " . $finalCheckMacValue);
-
-    return $finalCheckMacValue;
+    return $hash;
 }
 
 /**
