@@ -191,34 +191,26 @@ function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transac
 }
 
 /**
- * ATM檢查碼計算 - 重建送出時的參數結構
+ * ATM檢查碼計算 - 嘗試使用回傳參數但過濾空值
  */
 function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // 重建ATM送出時的參數結構（17個參數）
-    $params = [
-        'MerchantID' => '1020977',
-        'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
-        'MerchantTradeDate' => $receivedData['TradeDate'] ?? '',
-        'PaymentType' => 'aio',
-        'TotalAmount' => $receivedData['TradeAmt'] ?? '',
-        'TradeDesc' => '腳本開發服務',
-        'ItemName' => '腳本開發服務',
-        'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php',
-        'ChoosePayment' => 'ATM',
-        'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
-        'OrderResultURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php',
-        'EncryptType' => '1',
-        'CustomField1' => $receivedData['CustomField1'] ?? '',
-        'ExpireDate' => '3',
-        'PaymentInfoURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php',
-        'ClientRedirectURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php',
-        'NeedExtraPaidInfo' => 'Y'
-    ];
+    // 策略：使用回傳的參數，但只保留有值的參數
+    $params = $receivedData;
+    unset($params['CheckMacValue']);
 
-    logTransaction($transactionId, 'DEBUG', "ATM rebuilt parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+    // 過濾空值參數
+    $filteredParams = [];
+    foreach ($params as $key => $value) {
+        if ($value !== '' && $value !== null) {
+            $filteredParams[$key] = $value;
+        }
+    }
+
+    logTransaction($transactionId, 'DEBUG', "ATM non-empty parameters count: " . count($filteredParams));
+    logTransaction($transactionId, 'DEBUG', "ATM filtered parameters: " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
 
     // 按照官方規範計算
-    return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
+    return calculateOfficialCheckMacValue($filteredParams, $hashKey, $hashIV, $transactionId);
 }
 
 /**
