@@ -194,14 +194,23 @@ function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transac
  * ATM檢查碼計算 - 嘗試使用回傳參數但過濾空值
  */
 function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-     // Step 1: 移除CheckMacValue參數
-        $params = $receivedData;
-        unset($params['CheckMacValue']);
+    // 策略：使用回傳的參數，但只保留有值的參數
+    $params = $receivedData;
+    unset($params['CheckMacValue']);
 
-        logTransaction($transactionId, 'DEBUG', "Credit parameters count: " . count($params));
-        logTransaction($transactionId, 'DEBUG', "Credit filtered parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
-        // Step 2-8: 按照官方規範計算
-        return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
+    // 過濾空值參數
+    $filteredParams = [];
+    foreach ($params as $key => $value) {
+        if ($value !== '' && $value !== null) {
+            $filteredParams[$key] = $value;
+        }
+    }
+
+    logTransaction($transactionId, 'DEBUG', "ATM non-empty parameters count: " . count($filteredParams));
+    logTransaction($transactionId, 'DEBUG', "ATM filtered parameters: " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
+
+    // 按照官方規範計算
+    return calculateOfficialCheckMacValue($filteredParams, $hashKey, $hashIV, $transactionId);
 }
 
 /**
