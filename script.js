@@ -239,7 +239,7 @@ function processATMPayment(account, amount) {
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "ATM",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        OrderResultURL: CONFIG.funpoint.OrderResultURL,
+        //OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: account,
         // ATM 專用參數 1
