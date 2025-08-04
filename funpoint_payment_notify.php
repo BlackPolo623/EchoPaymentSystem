@@ -168,7 +168,7 @@ function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId
     if ($isATM) {
         // ATM付款：歐付寶只回傳部分參數，需要重建送出時的參數結構
         logTransaction($transactionId, 'DEBUG', "ATM payment: rebuilding original sent parameters");
-        return calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
+        return calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
     } else {
         // 信用卡付款：使用回傳的所有參數
         logTransaction($transactionId, 'DEBUG', "Credit payment: using all received parameters");
