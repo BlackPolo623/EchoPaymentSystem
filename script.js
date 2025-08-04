@@ -246,7 +246,7 @@ function processATMPayment(account, amount) {
         ExpireDate: 3,
         //PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
         //ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
-        //NeedExtraPaidInfo: "Y"
+        NeedExtraPaidInfo: "N"
     };
 
     // 計算檢查碼
