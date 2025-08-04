@@ -25,7 +25,7 @@ $config = [
 
 // 開始記錄交易
 $transactionId = generateTransactionId();
-logTransaction($transactionId, 'START', '接收到歐買尬金流通知');
+logTransaction($transactionId, 'START', 'Received funpoint payment notification');
 
 // 接收回傳的資料
 $receivedData = $_POST;
@@ -33,8 +33,8 @@ logTransaction($transactionId, 'DATA', $receivedData);
 
 // 驗證檢查碼
 if (!isset($receivedData['CheckMacValue'])) {
-    logTransaction($transactionId, 'ERROR', '缺少CheckMacValue參數');
-    echo '0|缺少CheckMacValue參數';
+    logTransaction($transactionId, 'ERROR', 'Missing CheckMacValue parameter');
+    echo '0|Missing CheckMacValue parameter';
     exit;
 }
 
@@ -42,28 +42,25 @@ $receivedCheckMacValue = $receivedData['CheckMacValue'];
 
 // 判斷付款方式
 $paymentType = detectPaymentType($receivedData);
-logTransaction($transactionId, 'INFO', "偵測到付款方式: {$paymentType}");
+logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
-// 計算檢查碼
-if ($paymentType === 'ATM') {
-    $calculatedCheckMacValue = calculateATMCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
-} else {
-    // 信用卡使用原本的邏輯
-    $calculatedCheckMacValue = calculateOriginalCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
-}
+// 按照官方規範計算檢查碼
+$calculatedCheckMacValue = calculateCheckMacValueOfficial($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
 
-logTransaction($transactionId, 'DEBUG', "檢查碼比對 - 接收值: {$receivedCheckMacValue}, 計算值: {$calculatedCheckMacValue}");
+logTransaction($transactionId, 'DEBUG', "CheckMacValue comparison - Received: {$receivedCheckMacValue}, Calculated: {$calculatedCheckMacValue}");
 
 // 驗證檢查碼
 if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
-    logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗 ({$paymentType}): 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
-    echo '0|CheckMacValue 驗證失敗';
+    logTransaction($transactionId, 'ERROR', "CheckMacValue verification failed ({$paymentType}): Calculated={$calculatedCheckMacValue}, Received={$receivedCheckMacValue}");
+    echo '0|CheckMacValue verification failed';
     exit;
 }
 
+logTransaction($transactionId, 'SUCCESS', 'CheckMacValue verification passed');
+
 // 驗證交易狀態
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
-    logTransaction($transactionId, 'INFO', "交易未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
+    logTransaction($transactionId, 'INFO', "Transaction not successful: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
     echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
     exit;
 }
@@ -71,20 +68,20 @@ if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
 // 1. 從自訂欄位取得用戶帳號
 $account = $receivedData['CustomField1'] ?? '';
 if (empty($account)) {
-    logTransaction($transactionId, 'ERROR', "找不到用戶帳號");
-    echo '0|找不到用戶帳號';
+    logTransaction($transactionId, 'ERROR', "User account not found");
+    echo '0|User account not found';
     exit;
 }
 
 // 2. 獲取交易資料
 $merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
 $amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
-$remark = "歐買尬金流付款 ({$paymentType}) - " . date('Y-m-d H:i:s');
+$remark = "Funpoint payment ({$paymentType}) - " . date('Y-m-d H:i:s');
 
 // 驗證交易數據
 if (empty($merchantTradeNo) || $amount <= 0) {
-    logTransaction($transactionId, 'ERROR', "無效的交易數據: MerchantTradeNo={$merchantTradeNo}, amount={$amount}");
-    echo '0|無效的交易數據';
+    logTransaction($transactionId, 'ERROR', "Invalid transaction data: MerchantTradeNo={$merchantTradeNo}, amount={$amount}");
+    echo '0|Invalid transaction data';
     exit;
 }
 
@@ -109,7 +106,7 @@ try {
 
     if ($stmt->rowCount() > 0) {
         // 交易已存在，避免重複處理
-        logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");
+        logTransaction($transactionId, 'INFO', "Transaction already exists: {$merchantTradeNo}");
         $pdo->commit();
         echo '1|OK';
         exit;
@@ -121,9 +118,9 @@ try {
 
     if ($stmt->rowCount() == 0) {
         // 賬號不存在
-        logTransaction($transactionId, 'ERROR', "賬號不存在: {$account}");
+        logTransaction($transactionId, 'ERROR', "Account does not exist: {$account}");
         $pdo->rollBack();
-        echo '0|賬號不存在';
+        echo '0|Account does not exist';
         exit;
     }
 
@@ -144,7 +141,7 @@ try {
     $pdo->commit();
 
     // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流交易 ({$paymentType}): {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
+    logTransaction($transactionId, 'SUCCESS', "Successfully processed funpoint transaction ({$paymentType}): {$merchantTradeNo}, Account: {$account}, Amount: {$amount}");
 
 } catch (PDOException $e) {
     // 回滾交易
@@ -153,8 +150,8 @@ try {
     }
 
     // 記錄錯誤
-    logTransaction($transactionId, 'ERROR', "數據庫錯誤: " . $e->getMessage());
-    echo '0|數據庫錯誤';
+    logTransaction($transactionId, 'ERROR', "Database error: " . $e->getMessage());
+    echo '0|Database error';
     exit;
 }
 
@@ -169,6 +166,9 @@ function detectPaymentType($data) {
         if (strpos($data['PaymentType'], 'ATM') !== false) {
             return 'ATM';
         }
+        if (strpos($data['PaymentType'], 'Credit') !== false) {
+            return 'CREDIT';
+        }
     }
 
     if (isset($data['ATMAccBank']) && !empty($data['ATMAccBank'])) {
@@ -179,79 +179,74 @@ function detectPaymentType($data) {
 }
 
 /**
- * 原本的檢查碼計算邏輯 (用於信用卡)
+ * 完全按照官方文件規範計算檢查碼
+ * 關鍵：所有參數都要參與計算，包括空值參數
  */
-function calculateOriginalCheckMacValue($receivedData, $hashKey, $hashIV) {
+function calculateCheckMacValueOfficial($receivedData, $hashKey, $hashIV, $transactionId) {
+    // Step 1: 移除CheckMacValue參數
     $params = $receivedData;
     unset($params['CheckMacValue']);
 
-    // 排序參數並計算檢查碼
+    logTransaction($transactionId, 'DEBUG', "Step 1 - Parameters for calculation: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+
+    // Step 2: 按照英文字母順序排序
     ksort($params);
-    $checkStr = "HashKey=" . $hashKey;
+
+    // Step 3: 串連參數
+    $paramString = '';
     foreach ($params as $key => $value) {
-        $checkStr .= "&" . $key . "=" . $value;
-    }
-    $checkStr .= "&HashIV=" . $hashIV;
-    $checkStr = urlencode($checkStr);
-    $checkStr = strtolower($checkStr);
-
-    // 取代特殊字元
-    $checkStr = str_replace('%2d', '-', $checkStr);
-    $checkStr = str_replace('%5f', '_', $checkStr);
-    $checkStr = str_replace('%2e', '.', $checkStr);
-    $checkStr = str_replace('%21', '!', $checkStr);
-    $checkStr = str_replace('%2a', '*', $checkStr);
-    $checkStr = str_replace('%28', '(', $checkStr);
-    $checkStr = str_replace('%29', ')', $checkStr);
-
-    // 計算檢查碼
-    return strtoupper(hash('sha256', $checkStr));
-}
-
-/**
- * ATM 檢查碼計算 - 嘗試不同的策略
- */
-function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV) {
-    $params = $receivedData;
-    unset($params['CheckMacValue']);
-
-    // 策略1: 只使用有值的欄位
-    $nonEmptyParams = [];
-    foreach ($params as $key => $value) {
-        if ($value !== '' && $value !== null) {
-            $nonEmptyParams[$key] = $value;
+        if ($paramString !== '') {
+            $paramString .= '&';
         }
+        $paramString .= $key . '=' . $value;
     }
 
-    // 排序參數並計算檢查碼
-    ksort($nonEmptyParams);
-    $checkStr = "HashKey=" . $hashKey;
-    foreach ($nonEmptyParams as $key => $value) {
-        $checkStr .= "&" . $key . "=" . $value;
+    logTransaction($transactionId, 'DEBUG', "Step 2 - Sorted parameter string: " . $paramString);
+
+    // Step 4: 前面加HashKey，後面加HashIV
+    $checkString = "HashKey=" . $hashKey . "&" . $paramString . "&HashIV=" . $hashIV;
+
+    logTransaction($transactionId, 'DEBUG', "Step 3 - String with HashKey and HashIV: " . $checkString);
+
+    // Step 5: URL encode
+    $encodedString = urlencode($checkString);
+
+    logTransaction($transactionId, 'DEBUG', "Step 4 - URL encoded string: " . $encodedString);
+
+    // Step 6: 轉小寫
+    $lowerString = strtolower($encodedString);
+
+    logTransaction($transactionId, 'DEBUG', "Step 5 - Lowercase string: " . $lowerString);
+
+    // Step 7: 按照官方文件進行字元替換 (PHP專用)
+    $replacedString = $lowerString;
+    $str_replacements = [
+        '%2d' => '-',
+        '%5f' => '_',
+        '%2e' => '.',
+        '%21' => '!',
+        '%2a' => '*',
+        '%28' => '(',
+        '%29' => ')'
+    ];
+
+    foreach ($str_replacements as $search => $replace) {
+        $replacedString = str_replace($search, $replace, $replacedString);
     }
-    $checkStr .= "&HashIV=" . $hashIV;
 
-    logTransaction(generateTransactionId(), 'DEBUG', "ATM原始字串: " . $checkStr);
+    logTransaction($transactionId, 'DEBUG', "Step 6 - After character replacement: " . $replacedString);
 
-    $checkStr = urlencode($checkStr);
-    $checkStr = strtolower($checkStr);
+    // Step 8: SHA256加密
+    $hash = hash('sha256', $replacedString);
 
-    // 取代特殊字元
-    $checkStr = str_replace('%2d', '-', $checkStr);
-    $checkStr = str_replace('%5f', '_', $checkStr);
-    $checkStr = str_replace('%2e', '.', $checkStr);
-    $checkStr = str_replace('%21', '!', $checkStr);
-    $checkStr = str_replace('%2a', '*', $checkStr);
-    $checkStr = str_replace('%28', '(', $checkStr);
-    $checkStr = str_replace('%29', ')', $checkStr);
+    logTransaction($transactionId, 'DEBUG', "Step 7 - SHA256 hash (lowercase): " . $hash);
 
-    logTransaction(generateTransactionId(), 'DEBUG', "ATM處理後字串: " . $checkStr);
+    // Step 9: 轉大寫
+    $finalCheckMacValue = strtoupper($hash);
 
-    // 計算檢查碼
-    $result = strtoupper(hash('sha256', $checkStr));
-    logTransaction(generateTransactionId(), 'DEBUG', "ATM計算結果: " . $result);
+    logTransaction($transactionId, 'DEBUG', "Step 8 - Final CheckMacValue (uppercase): " . $finalCheckMacValue);
 
-    return $result;
+    return $finalCheckMacValue;
 }
 
 /**
