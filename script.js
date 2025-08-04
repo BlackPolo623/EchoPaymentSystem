@@ -69,52 +69,35 @@ async function checkAccountExists(account) {
     }
 }
 
-// 修正後的檢查碼產生函數 - 與後端 PHP 完全一致
+// 產生檢查碼 (SHA256) - 保持原本的邏輯
 function generateCheckMacValue(params) {
     // 移除CheckMacValue參數
     if (params.CheckMacValue) {
         delete params.CheckMacValue;
     }
 
-    // 過濾空值參數 - 與後端一致
-    const filteredParams = {};
-    for (const key in params) {
-        if (params[key] !== '' && params[key] !== null && params[key] !== undefined) {
-            filteredParams[key] = params[key];
-        }
-    }
-
     // 按照字母順序排序
-    const keys = Object.keys(filteredParams).sort();
+    const keys = Object.keys(params).sort();
 
     // 組合字串
     let checkString = "HashKey=" + CONFIG.funpoint.HashKey;
     keys.forEach(key => {
-        checkString += "&" + key + "=" + filteredParams[key];
+        checkString += "&" + key + "=" + params[key];
     });
     checkString += "&HashIV=" + CONFIG.funpoint.HashIV;
 
-    // URL encode
-    checkString = encodeURIComponent(checkString);
+    // 進行 URL encode
+    checkString = encodeURIComponent(checkString).toLowerCase();
 
-    // 轉小寫
-    checkString = checkString.toLowerCase();
-
-    // 特殊字元處理 - 完全按照歐付寶規範
-    const replacements = {
-        '%2d': '-',
-        '%5f': '_',
-        '%2e': '.',
-        '%21': '!',
-        '%2a': '*',
-        '%28': '(',
-        '%29': ')',
-        '%20': '+'  // 空格處理
-    };
-
-    for (const search in replacements) {
-        checkString = checkString.replace(new RegExp(search, 'g'), replacements[search]);
-    }
+    // 取代特殊符號
+    checkString = checkString.replace(/%20/g, '+')
+                            .replace(/%2d/g, '-')
+                            .replace(/%5f/g, '_')
+                            .replace(/%2e/g, '.')
+                            .replace(/%21/g, '!')
+                            .replace(/%2a/g, '*')
+                            .replace(/%28/g, '(')
+                            .replace(/%29/g, ')');
 
     // 計算SHA256雜湊
     return CryptoJS.SHA256(checkString).toString().toUpperCase();
@@ -256,6 +239,7 @@ function processATMPayment(account, amount) {
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "ATM",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
+        OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: account,
         // ATM 專用參數

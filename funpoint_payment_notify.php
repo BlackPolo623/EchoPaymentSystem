@@ -39,16 +39,27 @@ if (!isset($receivedData['CheckMacValue'])) {
 }
 
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
-unset($receivedData['CheckMacValue']);
 
-// 修正後的檢查碼計算函數
-$calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
+// 判斷付款方式
+$paymentType = detectPaymentType($receivedData);
+logTransaction($transactionId, 'INFO', "偵測到付款方式: {$paymentType}");
 
-logTransaction($transactionId, 'DEBUG', "計算檢查碼過程 - 接收值: {$receivedCheckMacValue}, 計算值: {$calculatedCheckMacValue}");
+// 根據付款方式計算檢查碼
+if ($paymentType === 'CREDIT') {
+    $calculatedCheckMacValue = calculateCreditCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
+} else if ($paymentType === 'ATM') {
+    $calculatedCheckMacValue = calculateATMCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
+} else {
+    logTransaction($transactionId, 'ERROR', "未知的付款方式: {$paymentType}");
+    echo '0|未知的付款方式';
+    exit;
+}
+
+logTransaction($transactionId, 'DEBUG', "檢查碼比對 - 接收值: {$receivedCheckMacValue}, 計算值: {$calculatedCheckMacValue}");
 
 // 驗證檢查碼
 if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
-    logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
+    logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗 ({$paymentType}): 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
     echo '0|CheckMacValue 驗證失敗';
     exit;
 }
@@ -71,7 +82,7 @@ if (empty($account)) {
 // 2. 獲取交易資料
 $merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
 $amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
-$remark = "歐買尬金流付款 - " . date('Y-m-d H:i:s');
+$remark = "歐買尬金流付款 ({$paymentType}) - " . date('Y-m-d H:i:s');
 
 // 驗證交易數據
 if (empty($merchantTradeNo) || $amount <= 0) {
@@ -136,7 +147,7 @@ try {
     $pdo->commit();
 
     // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流交易: {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
+    logTransaction($transactionId, 'SUCCESS', "成功處理歐買尬金流交易 ({$paymentType}): {$merchantTradeNo}, 賬號: {$account}, 金額: {$amount}");
 
 } catch (PDOException $e) {
     // 回滾交易
@@ -154,11 +165,66 @@ try {
 echo '1|OK';
 
 /**
- * 修正後的檢查碼計算函數
- * 完全按照歐付寶官方規範實作
+ * 偵測付款方式
  */
-function calculateCheckMacValue($params, $hashKey, $hashIV) {
-    // 過濾空值參數 - 根據歐付寶文件，空值不參與計算
+function detectPaymentType($data) {
+    // 根據回傳的資料判斷付款方式
+    if (isset($data['PaymentType']) && strpos($data['PaymentType'], 'ATM') !== false) {
+        return 'ATM';
+    }
+
+    // 如果有ATM相關欄位，判定為ATM
+    if (isset($data['ATMAccBank']) && !empty($data['ATMAccBank'])) {
+        return 'ATM';
+    }
+
+    // 如果有信用卡相關欄位，判定為信用卡
+    if (isset($data['card4no']) || isset($data['card6no'])) {
+        return 'CREDIT';
+    }
+
+    // 預設為信用卡
+    return 'CREDIT';
+}
+
+/**
+ * 信用卡付款檢查碼計算 (原本的邏輯)
+ */
+function calculateCreditCheckMacValue($data, $hashKey, $hashIV) {
+    $params = $data;
+    unset($params['CheckMacValue']);
+
+    // 排序參數並計算檢查碼
+    ksort($params);
+    $checkStr = "HashKey=" . $hashKey;
+    foreach ($params as $key => $value) {
+        $checkStr .= "&" . $key . "=" . $value;
+    }
+    $checkStr .= "&HashIV=" . $hashIV;
+    $checkStr = urlencode($checkStr);
+    $checkStr = strtolower($checkStr);
+
+    // 取代特殊字元
+    $checkStr = str_replace('%2d', '-', $checkStr);
+    $checkStr = str_replace('%5f', '_', $checkStr);
+    $checkStr = str_replace('%2e', '.', $checkStr);
+    $checkStr = str_replace('%21', '!', $checkStr);
+    $checkStr = str_replace('%2a', '*', $checkStr);
+    $checkStr = str_replace('%28', '(', $checkStr);
+    $checkStr = str_replace('%29', ')', $checkStr);
+
+    // 計算檢查碼
+    return strtoupper(hash('sha256', $checkStr));
+}
+
+/**
+ * ATM付款檢查碼計算 (過濾空值)
+ */
+function calculateATMCheckMacValue($data, $hashKey, $hashIV) {
+    $params = $data;
+    unset($params['CheckMacValue']);
+
+    // 過濾空值參數 - ATM回傳很多空值欄位
     $filteredParams = [];
     foreach ($params as $key => $value) {
         if ($value !== '' && $value !== null) {
@@ -166,37 +232,26 @@ function calculateCheckMacValue($params, $hashKey, $hashIV) {
         }
     }
 
-    // 按照 key 字母順序排序
+    // 排序參數並計算檢查碼
     ksort($filteredParams);
-
-    // 組合字串
     $checkStr = "HashKey=" . $hashKey;
     foreach ($filteredParams as $key => $value) {
         $checkStr .= "&" . $key . "=" . $value;
     }
     $checkStr .= "&HashIV=" . $hashIV;
-
-    // URL encode
     $checkStr = urlencode($checkStr);
-
-    // 轉小寫
     $checkStr = strtolower($checkStr);
 
-    // 特殊字元處理 - 按照歐付寶規範
-    $replacements = [
-        '%2d' => '-',
-        '%5f' => '_',
-        '%2e' => '.',
-        '%21' => '!',
-        '%2a' => '*',
-        '%28' => '(',
-        '%29' => ')',
-        '%20' => '+'  // 空格處理
-    ];
+    // 取代特殊字元
+    $checkStr = str_replace('%2d', '-', $checkStr);
+    $checkStr = str_replace('%5f', '_', $checkStr);
+    $checkStr = str_replace('%2e', '.', $checkStr);
+    $checkStr = str_replace('%21', '!', $checkStr);
+    $checkStr = str_replace('%2a', '*', $checkStr);
+    $checkStr = str_replace('%28', '(', $checkStr);
+    $checkStr = str_replace('%29', ')', $checkStr);
 
-    $checkStr = str_replace(array_keys($replacements), array_values($replacements), $checkStr);
-
-    // 計算 SHA256
+    // 計算檢查碼
     return strtoupper(hash('sha256', $checkStr));
 }
 
