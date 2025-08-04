@@ -185,7 +185,7 @@ function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transac
     unset($params['CheckMacValue']);
 
     logTransaction($transactionId, 'DEBUG', "Credit parameters count: " . count($params));
-
+    logTransaction($transactionId, 'DEBUG', "Credit filtered parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
     // Step 2-8: 按照官方規範計算
     return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
 }
