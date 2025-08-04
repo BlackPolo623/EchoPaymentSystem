@@ -44,15 +44,12 @@ $receivedCheckMacValue = $receivedData['CheckMacValue'];
 $paymentType = detectPaymentType($receivedData);
 logTransaction($transactionId, 'INFO', "偵測到付款方式: {$paymentType}");
 
-// 根據付款方式使用不同的參數集合來計算檢查碼
-if ($paymentType === 'CREDIT') {
-    $calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], 'CREDIT');
-} else if ($paymentType === 'ATM') {
-    $calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], 'ATM');
+// 計算檢查碼
+if ($paymentType === 'ATM') {
+    $calculatedCheckMacValue = calculateATMCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
 } else {
-    logTransaction($transactionId, 'ERROR', "未知的付款方式: {$paymentType}");
-    echo '0|未知的付款方式';
-    exit;
+    // 信用卡使用原本的邏輯
+    $calculatedCheckMacValue = calculateOriginalCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
 }
 
 logTransaction($transactionId, 'DEBUG', "檢查碼比對 - 接收值: {$receivedCheckMacValue}, 計算值: {$calculatedCheckMacValue}");
@@ -168,71 +165,73 @@ echo '1|OK';
  * 偵測付款方式
  */
 function detectPaymentType($data) {
-    // 根據回傳的資料判斷付款方式
     if (isset($data['PaymentType'])) {
         if (strpos($data['PaymentType'], 'ATM') !== false) {
             return 'ATM';
         }
-        if (strpos($data['PaymentType'], 'Credit') !== false) {
-            return 'CREDIT';
-        }
     }
 
-    // 如果有ATM相關欄位，判定為ATM
     if (isset($data['ATMAccBank']) && !empty($data['ATMAccBank'])) {
         return 'ATM';
     }
 
-    // 預設為信用卡
     return 'CREDIT';
 }
 
 /**
- * 統一的檢查碼計算函數，根據付款方式使用不同的參數集合
+ * 原本的檢查碼計算邏輯 (用於信用卡)
  */
-function calculateCheckMacValue($data, $hashKey, $hashIV, $paymentType) {
-    $params = $data;
+function calculateOriginalCheckMacValue($receivedData, $hashKey, $hashIV) {
+    $params = $receivedData;
     unset($params['CheckMacValue']);
 
-    // 根據付款方式決定參與計算的欄位
-    if ($paymentType === 'ATM') {
-        // ATM 付款只使用核心欄位，忽略空值和非必要欄位
-        $allowedFields = [
-            'MerchantID', 'MerchantTradeNo', 'RtnCode', 'RtnMsg', 'TradeNo',
-            'TradeAmt', 'PaymentDate', 'PaymentType', 'PaymentTypeChargeFee',
-            'TradeDate', 'SimulatePaid', 'CustomField1', 'CustomField2',
-            'CustomField3', 'CustomField4', 'ATMAccBank', 'ATMAccNo'
-        ];
+    // 排序參數並計算檢查碼
+    ksort($params);
+    $checkStr = "HashKey=" . $hashKey;
+    foreach ($params as $key => $value) {
+        $checkStr .= "&" . $key . "=" . $value;
+    }
+    $checkStr .= "&HashIV=" . $hashIV;
+    $checkStr = urlencode($checkStr);
+    $checkStr = strtolower($checkStr);
 
-        $filteredParams = [];
-        foreach ($allowedFields as $field) {
-            if (isset($params[$field]) && $params[$field] !== '') {
-                $filteredParams[$field] = $params[$field];
-            }
-        }
-    } else {
-        // 信用卡付款使用所有非空欄位
-        $filteredParams = [];
-        foreach ($params as $key => $value) {
-            if ($value !== '' && $value !== null) {
-                $filteredParams[$key] = $value;
-            }
+    // 取代特殊字元
+    $checkStr = str_replace('%2d', '-', $checkStr);
+    $checkStr = str_replace('%5f', '_', $checkStr);
+    $checkStr = str_replace('%2e', '.', $checkStr);
+    $checkStr = str_replace('%21', '!', $checkStr);
+    $checkStr = str_replace('%2a', '*', $checkStr);
+    $checkStr = str_replace('%28', '(', $checkStr);
+    $checkStr = str_replace('%29', ')', $checkStr);
+
+    // 計算檢查碼
+    return strtoupper(hash('sha256', $checkStr));
+}
+
+/**
+ * ATM 檢查碼計算 - 嘗試不同的策略
+ */
+function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV) {
+    $params = $receivedData;
+    unset($params['CheckMacValue']);
+
+    // 策略1: 只使用有值的欄位
+    $nonEmptyParams = [];
+    foreach ($params as $key => $value) {
+        if ($value !== '' && $value !== null) {
+            $nonEmptyParams[$key] = $value;
         }
     }
 
-    // 記錄參與計算的欄位
-    logTransaction(generateTransactionId(), 'DEBUG', "參與檢查碼計算的欄位 ({$paymentType}): " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
-
     // 排序參數並計算檢查碼
-    ksort($filteredParams);
+    ksort($nonEmptyParams);
     $checkStr = "HashKey=" . $hashKey;
-    foreach ($filteredParams as $key => $value) {
+    foreach ($nonEmptyParams as $key => $value) {
         $checkStr .= "&" . $key . "=" . $value;
     }
     $checkStr .= "&HashIV=" . $hashIV;
 
-    // 記錄原始檢查字串
-    logTransaction(generateTransactionId(), 'DEBUG', "原始檢查字串 ({$paymentType}): " . $checkStr);
+    logTransaction(generateTransactionId(), 'DEBUG', "ATM原始字串: " . $checkStr);
 
     $checkStr = urlencode($checkStr);
     $checkStr = strtolower($checkStr);
@@ -246,12 +245,11 @@ function calculateCheckMacValue($data, $hashKey, $hashIV, $paymentType) {
     $checkStr = str_replace('%28', '(', $checkStr);
     $checkStr = str_replace('%29', ')', $checkStr);
 
-    // 記錄處理後的檢查字串
-    logTransaction(generateTransactionId(), 'DEBUG', "處理後檢查字串 ({$paymentType}): " . $checkStr);
+    logTransaction(generateTransactionId(), 'DEBUG', "ATM處理後字串: " . $checkStr);
 
     // 計算檢查碼
     $result = strtoupper(hash('sha256', $checkStr));
-    logTransaction(generateTransactionId(), 'DEBUG', "最終檢查碼 ({$paymentType}): " . $result);
+    logTransaction(generateTransactionId(), 'DEBUG', "ATM計算結果: " . $result);
 
     return $result;
 }
