@@ -1,6 +1,6 @@
 <?php
 // funpoint_payment_notify.php
-// 這個檔案接收歐買尬金流的 Server 端通知
+// 重新設計，完全按照官方文件規範處理歐買尬金流通知
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -40,12 +40,16 @@ if (!isset($receivedData['CheckMacValue'])) {
 
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 
-// 判斷付款方式
+// 判斷付款方式並重建送出時的參數
 $paymentType = detectPaymentType($receivedData);
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
+// 重建送出時的參數結構
+$originalParams = rebuildOriginalParams($receivedData, $paymentType);
+logTransaction($transactionId, 'DEBUG', "Rebuilt original parameters: " . json_encode($originalParams, JSON_UNESCAPED_UNICODE));
+
 // 按照官方規範計算檢查碼
-$calculatedCheckMacValue = calculateCheckMacValueOfficial($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
+$calculatedCheckMacValue = calculateCheckMacValueOfficial($originalParams, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
 
 logTransaction($transactionId, 'DEBUG', "CheckMacValue comparison - Received: {$receivedCheckMacValue}, Calculated: {$calculatedCheckMacValue}");
 
@@ -61,7 +65,7 @@ logTransaction($transactionId, 'SUCCESS', 'CheckMacValue verification passed');
 // 驗證交易狀態
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
     logTransaction($transactionId, 'INFO', "Transaction not successful: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
-    echo '1|OK'; // 仍然返回成功，讓金流平台知道我們已收到通知
+    echo '1|OK';
     exit;
 }
 
@@ -179,102 +183,58 @@ function detectPaymentType($data) {
 }
 
 /**
- * 完全按照官方文件規範計算檢查碼
- * 關鍵：根據送出時的參數結構進行計算
+ * 重建送出時的原始參數結構
+ * 根據前端HTML表單的欄位重建
  */
-function calculateCheckMacValueOfficial($receivedData, $hashKey, $hashIV, $transactionId) {
-    // Step 1: 移除CheckMacValue參數
-    $params = $receivedData;
-    unset($params['CheckMacValue']);
-
-    // 判斷付款方式並使用對應的參數結構
-    $paymentType = detectPaymentType($receivedData);
+function rebuildOriginalParams($receivedData, $paymentType) {
+    $params = [];
 
     if ($paymentType === 'ATM') {
-        // ATM付款：使用前端送出的參數結構 (17個參數)
-        $atmFields = [
-            'ChoosePayment', 'ClientBackURL', 'ClientRedirectURL', 'CustomField1',
-            'EncryptType', 'ExpireDate', 'ItemName', 'MerchantID',
-            'MerchantTradeDate', 'MerchantTradeNo', 'NeedExtraPaidInfo',
-            'OrderResultURL', 'PaymentInfoURL', 'PaymentType', 'ReturnURL',
-            'TotalAmount', 'TradeDesc'
-        ];
-
-        $filteredParams = [];
-        foreach ($atmFields as $field) {
-            // 從回傳資料中對應到送出時的參數
-            if ($field === 'TotalAmount' && isset($params['TradeAmt'])) {
-                $filteredParams[$field] = $params['TradeAmt'];
-            } elseif ($field === 'MerchantTradeDate' && isset($params['TradeDate'])) {
-                $filteredParams[$field] = $params['TradeDate'];
-            } elseif ($field === 'ChoosePayment') {
-                $filteredParams[$field] = 'ATM';
-            } elseif ($field === 'PaymentType') {
-                $filteredParams[$field] = 'aio';
-            } elseif ($field === 'TradeDesc') {
-                $filteredParams[$field] = '腳本開發服務';
-            } elseif ($field === 'ItemName') {
-                $filteredParams[$field] = '腳本開發服務';
-            } elseif ($field === 'ReturnURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php';
-            } elseif ($field === 'ClientBackURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html';
-            } elseif ($field === 'OrderResultURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php';
-            } elseif ($field === 'PaymentInfoURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php';
-            } elseif ($field === 'ClientRedirectURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php';
-            } elseif ($field === 'ExpireDate') {
-                $filteredParams[$field] = '3';
-            } elseif ($field === 'NeedExtraPaidInfo') {
-                $filteredParams[$field] = 'Y';
-            } elseif ($field === 'EncryptType') {
-                $filteredParams[$field] = '1';
-            } elseif (isset($params[$field])) {
-                $filteredParams[$field] = $params[$field];
-            }
-        }
-        $params = $filteredParams;
-        logTransaction($transactionId, 'DEBUG', "ATM: Using original sent parameters structure");
-
+        // ATM表單的16個參數（根據HTML中的funpoint-ATMpayment-form）
+        $params['MerchantID'] = '1020977';
+        $params['MerchantTradeNo'] = $receivedData['MerchantTradeNo'] ?? '';
+        $params['MerchantTradeDate'] = $receivedData['TradeDate'] ?? '';
+        $params['PaymentType'] = 'aio';
+        $params['TotalAmount'] = $receivedData['TradeAmt'] ?? '';
+        $params['TradeDesc'] = '腳本開發服務';
+        $params['ItemName'] = '腳本開發服務';
+        $params['ReturnURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php';
+        $params['ChoosePayment'] = 'ATM';
+        $params['ClientBackURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html';
+        $params['EncryptType'] = '1';
+        $params['ExpireDate'] = '3';
+        $params['PaymentInfoURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php';
+        $params['ClientRedirectURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php';
+        $params['NeedExtraPaidInfo'] = 'Y';
+        $params['CustomField1'] = $receivedData['CustomField1'] ?? '';
     } else {
-        // 信用卡付款：使用前端送出的參數結構 (13個參數)
-        $creditFields = [
-            'ChoosePayment', 'ClientBackURL', 'CustomField1', 'EncryptType',
-            'ItemName', 'MerchantID', 'MerchantTradeDate', 'MerchantTradeNo',
-            'OrderResultURL', 'PaymentType', 'ReturnURL', 'TotalAmount', 'TradeDesc'
-        ];
+        // 信用卡表單的13個參數（根據HTML中的funpoint-payment-form）
+        $params['MerchantID'] = '1020977';
+        $params['MerchantTradeNo'] = $receivedData['MerchantTradeNo'] ?? '';
+        $params['MerchantTradeDate'] = $receivedData['TradeDate'] ?? '';
+        $params['PaymentType'] = 'aio';
+        $params['TotalAmount'] = $receivedData['TradeAmt'] ?? '';
+        $params['TradeDesc'] = '腳本開發服務';
+        $params['ItemName'] = '腳本開發服務';
+        $params['ReturnURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php';
+        $params['ChoosePayment'] = 'Credit';
+        $params['ClientBackURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html';
+        $params['OrderResultURL'] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php';
+        $params['EncryptType'] = '1';
+        $params['CustomField1'] = $receivedData['CustomField1'] ?? '';
+    }
 
-        $filteredParams = [];
-        foreach ($creditFields as $field) {
-            // 從回傳資料中對應到送出時的參數
-            if ($field === 'TotalAmount' && isset($params['TradeAmt'])) {
-                $filteredParams[$field] = $params['TradeAmt'];
-            } elseif ($field === 'MerchantTradeDate' && isset($params['TradeDate'])) {
-                $filteredParams[$field] = $params['TradeDate'];
-            } elseif ($field === 'ChoosePayment') {
-                $filteredParams[$field] = 'Credit';
-            } elseif ($field === 'PaymentType') {
-                $filteredParams[$field] = 'aio';
-            } elseif ($field === 'TradeDesc') {
-                $filteredParams[$field] = '腳本開發服務';
-            } elseif ($field === 'ItemName') {
-                $filteredParams[$field] = '腳本開發服務';
-            } elseif ($field === 'ReturnURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php';
-            } elseif ($field === 'ClientBackURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html';
-            } elseif ($field === 'OrderResultURL') {
-                $filteredParams[$field] = 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php';
-            } elseif ($field === 'EncryptType') {
-                $filteredParams[$field] = '1';
-            } elseif (isset($params[$field])) {
-                $filteredParams[$field] = $params[$field];
-            }
-        }
-        $params = $filteredParams;
-        logTransaction($transactionId, 'DEBUG', "CREDIT: Using original sent parameters structure");
+    return $params;
+}
+
+/**
+ * 完全按照官方文件規範計算檢查碼
+ * 8個步驟完全對應官方文件
+ */
+function calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transactionId) {
+    // Step 1: 移除CheckMacValue參數（如果存在）
+    if (isset($params['CheckMacValue'])) {
+        unset($params['CheckMacValue']);
     }
 
     logTransaction($transactionId, 'DEBUG', "Step 1 - Parameters for calculation: " . json_encode($params, JSON_UNESCAPED_UNICODE));
