@@ -159,19 +159,77 @@ try {
 echo '1|OK';
 
 /**
- * 計算檢查碼 - 完全按照官方文件，使用所有回傳參數（除了CheckMacValue）
+ * 計算檢查碼 - 根據付款方式使用不同策略
  */
 function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
+    // 判斷付款方式
+    $isATM = (isset($receivedData['ATMAccBank']) && !empty($receivedData['ATMAccBank']));
+
+    if ($isATM) {
+        // ATM付款：歐付寶只回傳部分參數，需要重建送出時的參數結構
+        logTransaction($transactionId, 'DEBUG', "ATM payment: rebuilding original sent parameters");
+        return calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
+    } else {
+        // 信用卡付款：使用回傳的所有參數
+        logTransaction($transactionId, 'DEBUG', "Credit payment: using all received parameters");
+        return calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
+    }
+}
+
+/**
+ * 信用卡檢查碼計算 - 使用所有回傳參數
+ */
+function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
     // Step 1: 移除CheckMacValue參數
     $params = $receivedData;
     unset($params['CheckMacValue']);
 
-    logTransaction($transactionId, 'DEBUG', "All parameters count: " . count($params));
+    logTransaction($transactionId, 'DEBUG', "Credit parameters count: " . count($params));
 
-    // Step 2: 按照英文字母順序排序
+    // Step 2-8: 按照官方規範計算
+    return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
+}
+
+/**
+ * ATM檢查碼計算 - 重建送出時的參數結構
+ */
+function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
+    // 重建ATM送出時的參數結構（17個參數）
+    $params = [
+        'MerchantID' => '1020977',
+        'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
+        'MerchantTradeDate' => $receivedData['TradeDate'] ?? '',
+        'PaymentType' => 'aio',
+        'TotalAmount' => $receivedData['TradeAmt'] ?? '',
+        'TradeDesc' => '腳本開發服務',
+        'ItemName' => '腳本開發服務',
+        'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php',
+        'ChoosePayment' => 'ATM',
+        'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
+        'OrderResultURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php',
+        'EncryptType' => '1',
+        'CustomField1' => $receivedData['CustomField1'] ?? '',
+        'ExpireDate' => '3',
+        'PaymentInfoURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php',
+        'ClientRedirectURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php',
+        'NeedExtraPaidInfo' => 'Y'
+    ];
+
+    logTransaction($transactionId, 'DEBUG', "ATM rebuilt parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+
+    // 按照官方規範計算
+    return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
+}
+
+/**
+ * 官方規範檢查碼計算
+ */
+function calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId) {
+
+    // Step 1: 按照英文字母順序排序
     ksort($params);
 
-    // Step 3: 串連參數
+    // Step 2: 串連參數
     $paramString = '';
     foreach ($params as $key => $value) {
         if ($paramString !== '') {
@@ -182,22 +240,22 @@ function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId
 
     logTransaction($transactionId, 'DEBUG', "Sorted parameter string: " . $paramString);
 
-    // Step 4: 前面加HashKey，後面加HashIV
+    // Step 3: 前面加HashKey，後面加HashIV
     $checkString = "HashKey=" . $hashKey . "&" . $paramString . "&HashIV=" . $hashIV;
 
     logTransaction($transactionId, 'DEBUG', "String with HashKey and HashIV: " . $checkString);
 
-    // Step 5: URL encode
+    // Step 4: URL encode
     $encodedString = urlencode($checkString);
 
     logTransaction($transactionId, 'DEBUG', "URL encoded string: " . $encodedString);
 
-    // Step 6: 轉小寫
+    // Step 5: 轉小寫
     $lowerString = strtolower($encodedString);
 
     logTransaction($transactionId, 'DEBUG', "Lowercase string: " . $lowerString);
 
-    // Step 7: 字元替換（按照官方文件）
+    // Step 6: 字元替換（按照官方文件）
     $replacedString = $lowerString;
     $str_replacements = [
         '%2d' => '-',
@@ -215,7 +273,7 @@ function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId
 
     logTransaction($transactionId, 'DEBUG', "After character replacement: " . $replacedString);
 
-    // Step 8: SHA256加密並轉大寫
+    // Step 7: SHA256加密並轉大寫
     $hash = strtoupper(hash('sha256', $replacedString));
 
     logTransaction($transactionId, 'DEBUG', "Final CheckMacValue: " . $hash);
