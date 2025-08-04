@@ -199,12 +199,12 @@ function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactio
     unset($params['CheckMacValue']);
 
     // 過濾空值參數
-    $filteredParams = [];
+    /*$filteredParams = [];
     foreach ($params as $key => $value) {
-        //if ($value !== '' && $value !== null) {
+        if ($value !== '' && $value !== null) {
             $filteredParams[$key] = $value;
-        //}
-    }
+        }
+    }*/
 
     logTransaction($transactionId, 'DEBUG', "ATM non-empty parameters count: " . count($filteredParams));
     logTransaction($transactionId, 'DEBUG', "ATM filtered parameters: " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
