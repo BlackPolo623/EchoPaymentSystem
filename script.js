@@ -14,12 +14,10 @@ const CONFIG = {
         ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php",
         ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
         OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php",
-        // 新增這兩行
-        // ATM 專用設定都正確
-        //ATMReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_notify.php",      // 付款完成通知
-        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",      // 取號完成通知
-        ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"        // 用戶看到的頁面
-        },
+        // ATM 專用設定
+        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",
+        ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_redirect.php"
+    },
     // SmilePay設定
     smilepay: {
         dcvc: "16761",
@@ -71,35 +69,52 @@ async function checkAccountExists(account) {
     }
 }
 
-// 產生檢查碼 (SHA256)
+// 修正後的檢查碼產生函數 - 與後端 PHP 完全一致
 function generateCheckMacValue(params) {
     // 移除CheckMacValue參數
     if (params.CheckMacValue) {
         delete params.CheckMacValue;
     }
 
+    // 過濾空值參數 - 與後端一致
+    const filteredParams = {};
+    for (const key in params) {
+        if (params[key] !== '' && params[key] !== null && params[key] !== undefined) {
+            filteredParams[key] = params[key];
+        }
+    }
+
     // 按照字母順序排序
-    const keys = Object.keys(params).sort();
+    const keys = Object.keys(filteredParams).sort();
 
     // 組合字串
     let checkString = "HashKey=" + CONFIG.funpoint.HashKey;
     keys.forEach(key => {
-        checkString += "&" + key + "=" + params[key];
+        checkString += "&" + key + "=" + filteredParams[key];
     });
     checkString += "&HashIV=" + CONFIG.funpoint.HashIV;
 
-    // 進行 URL encode
-    checkString = encodeURIComponent(checkString).toLowerCase();
+    // URL encode
+    checkString = encodeURIComponent(checkString);
 
-    // 取代特殊符號
-    checkString = checkString.replace(/%20/g, '+')
-                            .replace(/%2d/g, '-')
-                            .replace(/%5f/g, '_')
-                            .replace(/%2e/g, '.')
-                            .replace(/%21/g, '!')
-                            .replace(/%2a/g, '*')
-                            .replace(/%28/g, '(')
-                            .replace(/%29/g, ')');
+    // 轉小寫
+    checkString = checkString.toLowerCase();
+
+    // 特殊字元處理 - 完全按照歐付寶規範
+    const replacements = {
+        '%2d': '-',
+        '%5f': '_',
+        '%2e': '.',
+        '%21': '!',
+        '%2a': '*',
+        '%28': '(',
+        '%29': ')',
+        '%20': '+'  // 空格處理
+    };
+
+    for (const search in replacements) {
+        checkString = checkString.replace(new RegExp(search, 'g'), replacements[search]);
+    }
 
     // 計算SHA256雜湊
     return CryptoJS.SHA256(checkString).toString().toUpperCase();
@@ -183,21 +198,21 @@ function processFunpointPayment(account, amount) {
                            now.getSeconds().toString().padStart(2, '0');
 
     // 組裝訂單參數
-     const params = {
-            MerchantID: CONFIG.funpoint.MerchantID,
-            MerchantTradeNo: merchantTradeNo,
-            MerchantTradeDate: merchantTradeDate,
-            PaymentType: "aio",
-            TotalAmount: amount,
-            TradeDesc: "腳本開發服務",
-            ItemName: "腳本開發服務",
-            ReturnURL: CONFIG.funpoint.ReturnURL,
-            ChoosePayment: "Credit",
-            ClientBackURL: CONFIG.funpoint.ClientBackURL,
-            OrderResultURL: CONFIG.funpoint.OrderResultURL,
-            EncryptType: "1",
-            CustomField1: account
-        };
+    const params = {
+        MerchantID: CONFIG.funpoint.MerchantID,
+        MerchantTradeNo: merchantTradeNo,
+        MerchantTradeDate: merchantTradeDate,
+        PaymentType: "aio",
+        TotalAmount: amount,
+        TradeDesc: "腳本開發服務",
+        ItemName: "腳本開發服務",
+        ReturnURL: CONFIG.funpoint.ReturnURL,
+        ChoosePayment: "Credit",
+        ClientBackURL: CONFIG.funpoint.ClientBackURL,
+        OrderResultURL: CONFIG.funpoint.OrderResultURL,
+        EncryptType: "1",
+        CustomField1: account
+    };
 
     // 計算檢查碼
     params.CheckMacValue = generateCheckMacValue(params);
@@ -239,9 +254,8 @@ function processATMPayment(account, amount) {
         TradeDesc: "腳本開發服務",
         ItemName: "腳本開發服務",
         ReturnURL: CONFIG.funpoint.ReturnURL,
-        ChoosePayment: "ATM", // 固定為 ATM
+        ChoosePayment: "ATM",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        //OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: account,
         // ATM 專用參數

@@ -41,27 +41,10 @@ if (!isset($receivedData['CheckMacValue'])) {
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 unset($receivedData['CheckMacValue']);
 
-// 排序參數並計算檢查碼
-ksort($receivedData);
-$checkStr = "HashKey=" . $config['funpoint']['HashKey'];
-foreach ($receivedData as $key => $value) {
-    $checkStr .= "&" . $key . "=" . $value;
-}
-$checkStr .= "&HashIV=" . $config['funpoint']['HashIV'];
-$checkStr = urlencode($checkStr);
-$checkStr = strtolower($checkStr);
+// 修正後的檢查碼計算函數
+$calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV']);
 
-// 取代特殊字元
-$checkStr = str_replace('%2d', '-', $checkStr);
-$checkStr = str_replace('%5f', '_', $checkStr);
-$checkStr = str_replace('%2e', '.', $checkStr);
-$checkStr = str_replace('%21', '!', $checkStr);
-$checkStr = str_replace('%2a', '*', $checkStr);
-$checkStr = str_replace('%28', '(', $checkStr);
-$checkStr = str_replace('%29', ')', $checkStr);
-
-// 計算檢查碼
-$calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
+logTransaction($transactionId, 'DEBUG', "計算檢查碼過程 - 接收值: {$receivedCheckMacValue}, 計算值: {$calculatedCheckMacValue}");
 
 // 驗證檢查碼
 if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
@@ -171,6 +154,53 @@ try {
 echo '1|OK';
 
 /**
+ * 修正後的檢查碼計算函數
+ * 完全按照歐付寶官方規範實作
+ */
+function calculateCheckMacValue($params, $hashKey, $hashIV) {
+    // 過濾空值參數 - 根據歐付寶文件，空值不參與計算
+    $filteredParams = [];
+    foreach ($params as $key => $value) {
+        if ($value !== '' && $value !== null) {
+            $filteredParams[$key] = $value;
+        }
+    }
+
+    // 按照 key 字母順序排序
+    ksort($filteredParams);
+
+    // 組合字串
+    $checkStr = "HashKey=" . $hashKey;
+    foreach ($filteredParams as $key => $value) {
+        $checkStr .= "&" . $key . "=" . $value;
+    }
+    $checkStr .= "&HashIV=" . $hashIV;
+
+    // URL encode
+    $checkStr = urlencode($checkStr);
+
+    // 轉小寫
+    $checkStr = strtolower($checkStr);
+
+    // 特殊字元處理 - 按照歐付寶規範
+    $replacements = [
+        '%2d' => '-',
+        '%5f' => '_',
+        '%2e' => '.',
+        '%21' => '!',
+        '%2a' => '*',
+        '%28' => '(',
+        '%29' => ')',
+        '%20' => '+'  // 空格處理
+    ];
+
+    $checkStr = str_replace(array_keys($replacements), array_values($replacements), $checkStr);
+
+    // 計算 SHA256
+    return strtoupper(hash('sha256', $checkStr));
+}
+
+/**
  * 產生唯一交易ID用於日誌追蹤
  */
 function generateTransactionId() {
@@ -182,7 +212,7 @@ function generateTransactionId() {
  */
 function logTransaction($transactionId, $status, $data) {
     $timestamp = date('Y-m-d H:i:s');
-    $dataStr = is_array($data) ? json_encode($data) : $data;
+    $dataStr = is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : $data;
     $logMessage = "[$timestamp][$transactionId][$status] $dataStr\n";
     file_put_contents('funpoint_payment_notify.log', $logMessage, FILE_APPEND);
 }
