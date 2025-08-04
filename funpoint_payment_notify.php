@@ -1,6 +1,6 @@
 <?php
 // funpoint_payment_notify.php
-// 重新理解：使用回傳參數進行檢查碼驗證
+// 簡化版本：收到什麼就處理什麼，完全按照官方檢查碼機制
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -40,12 +40,12 @@ if (!isset($receivedData['CheckMacValue'])) {
 
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 
-// 判斷付款方式
-$paymentType = detectPaymentType($receivedData);
+// 簡單判斷付款方式（僅用於日誌）
+$paymentType = (isset($receivedData['ATMAccBank']) && !empty($receivedData['ATMAccBank'])) ? 'ATM' : 'CREDIT';
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
-// 關鍵修正：使用回傳的參數進行檢查碼計算，但要過濾正確的參數
-$calculatedCheckMacValue = calculateCheckMacValueFromResponse($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId, $paymentType);
+// 計算檢查碼：除了CheckMacValue，其他全部參與計算
+$calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
 
 logTransaction($transactionId, 'DEBUG', "CheckMacValue comparison - Received: {$receivedCheckMacValue}, Calculated: {$calculatedCheckMacValue}");
 
@@ -159,50 +159,19 @@ try {
 echo '1|OK';
 
 /**
- * 偵測付款方式
+ * 計算檢查碼 - 完全按照官方文件，使用所有回傳參數（除了CheckMacValue）
  */
-function detectPaymentType($data) {
-    if (isset($data['PaymentType'])) {
-        if (strpos($data['PaymentType'], 'ATM') !== false) {
-            return 'ATM';
-        }
-        if (strpos($data['PaymentType'], 'Credit') !== false) {
-            return 'CREDIT';
-        }
-    }
-
-    if (isset($data['ATMAccBank']) && !empty($data['ATMAccBank'])) {
-        return 'ATM';
-    }
-
-    return 'CREDIT';
-}
-
-/**
- * 使用回傳參數計算檢查碼，但根據付款方式過濾參數
- */
-function calculateCheckMacValueFromResponse($receivedData, $hashKey, $hashIV, $transactionId, $paymentType) {
-    // 移除CheckMacValue參數
+function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
+    // Step 1: 移除CheckMacValue參數
     $params = $receivedData;
     unset($params['CheckMacValue']);
 
-    // 嘗試策略：使用所有回傳參數（包括空值）
-    logTransaction($transactionId, 'DEBUG', "Using ALL response parameters (including empty values)");
+    logTransaction($transactionId, 'DEBUG', "All parameters count: " . count($params));
 
-    logTransaction($transactionId, 'DEBUG', "Parameters for calculation: " . json_encode($params, JSON_UNESCAPED_UNICODE));
-
-    // 按照官方規範計算檢查碼
-    return calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transactionId);
-}
-
-/**
- * 按照官方文件規範計算檢查碼
- */
-function calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transactionId) {
-    // Step 1: 按照英文字母順序排序
+    // Step 2: 按照英文字母順序排序
     ksort($params);
 
-    // Step 2: 串連參數
+    // Step 3: 串連參數
     $paramString = '';
     foreach ($params as $key => $value) {
         if ($paramString !== '') {
@@ -211,24 +180,24 @@ function calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transaction
         $paramString .= $key . '=' . $value;
     }
 
-    logTransaction($transactionId, 'DEBUG', "Step 1 - Sorted parameter string: " . $paramString);
+    logTransaction($transactionId, 'DEBUG', "Sorted parameter string: " . $paramString);
 
-    // Step 3: 前面加HashKey，後面加HashIV
+    // Step 4: 前面加HashKey，後面加HashIV
     $checkString = "HashKey=" . $hashKey . "&" . $paramString . "&HashIV=" . $hashIV;
 
-    logTransaction($transactionId, 'DEBUG', "Step 2 - String with HashKey and HashIV: " . $checkString);
+    logTransaction($transactionId, 'DEBUG', "String with HashKey and HashIV: " . $checkString);
 
-    // Step 4: URL encode
+    // Step 5: URL encode
     $encodedString = urlencode($checkString);
 
-    logTransaction($transactionId, 'DEBUG', "Step 3 - URL encoded string: " . $encodedString);
+    logTransaction($transactionId, 'DEBUG', "URL encoded string: " . $encodedString);
 
-    // Step 5: 轉小寫
+    // Step 6: 轉小寫
     $lowerString = strtolower($encodedString);
 
-    logTransaction($transactionId, 'DEBUG', "Step 4 - Lowercase string: " . $lowerString);
+    logTransaction($transactionId, 'DEBUG', "Lowercase string: " . $lowerString);
 
-    // Step 6: 字元替換
+    // Step 7: 字元替換（按照官方文件）
     $replacedString = $lowerString;
     $str_replacements = [
         '%2d' => '-',
@@ -244,12 +213,12 @@ function calculateCheckMacValueOfficial($params, $hashKey, $hashIV, $transaction
         $replacedString = str_replace($search, $replace, $replacedString);
     }
 
-    logTransaction($transactionId, 'DEBUG', "Step 5 - After character replacement: " . $replacedString);
+    logTransaction($transactionId, 'DEBUG', "After character replacement: " . $replacedString);
 
-    // Step 7: SHA256加密並轉大寫
+    // Step 8: SHA256加密並轉大寫
     $hash = strtoupper(hash('sha256', $replacedString));
 
-    logTransaction($transactionId, 'DEBUG', "Step 6 - Final CheckMacValue: " . $hash);
+    logTransaction($transactionId, 'DEBUG', "Final CheckMacValue: " . $hash);
 
     return $hash;
 }
