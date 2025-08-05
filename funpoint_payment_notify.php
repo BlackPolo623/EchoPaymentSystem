@@ -169,11 +169,12 @@ echo '1|OK';
  * ATM 檢查碼計算 - 根據送出時的參數結構重建
  */
 function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // 根據 processATMPayment 函數中送出的參數結構重建
+    // 根據 JavaScript processATMPayment 函數中實際送出的參數結構重建
+    // 注意：只包含 JavaScript 中實際設定的參數
     $sentParams = [
         'MerchantID' => $receivedData['MerchantID'] ?? '',
         'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
-        'MerchantTradeDate' => $receivedData['MerchantTradeDate'] ?? '',
+        'MerchantTradeDate' => $receivedData['MerchantTradeDate'] ?? '',  // 使用回傳的值
         'PaymentType' => 'aio',
         'TotalAmount' => $receivedData['TradeAmt'] ?? '',  // 回傳用 TradeAmt，送出用 TotalAmount
         'TradeDesc' => '腳本開發服務',
@@ -183,7 +184,9 @@ function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactio
         'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
         'EncryptType' => '1',
         'CustomField1' => $receivedData['CustomField1'] ?? '',
-        'ExpireDate' => '3',
+        'ExpireDate' => '3'
+        // 注意：JavaScript 中註解掉的參數這裡也不包含
+        // PaymentInfoURL, ClientRedirectURL, NeedExtraPaidInfo 都不包含
     ];
 
     logTransaction($transactionId, 'DEBUG', "ATM sent parameters reconstructed: " . json_encode($sentParams, JSON_UNESCAPED_UNICODE));
