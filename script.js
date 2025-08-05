@@ -255,15 +255,7 @@ function processATMPayment(account, amount) {
     };
 
     // 計算檢查碼 - 只用params
-    const calculatedCheckMacValue = generateCheckMacValue(params);
-    params.CheckMacValue = calculatedCheckMacValue;
-
-    // 彈窗顯示計算出來的CheckMacValue
-    alert(`ATM付款資訊：
-交易編號: ${merchantTradeNo}
-計算出的CheckMacValue: ${calculatedCheckMacValue}
-參數數量: ${Object.keys(params).length}
-點擊確定繼續付款...`);
+    params.CheckMacValue = generateCheckMacValue(params);
 
     // 合併所有參數
     const allParams = {...params, ...atmExtraParams};
@@ -285,13 +277,6 @@ function processATMPayment(account, amount) {
             form.elements[key].value = allParams[key];
         }
     }
-
-    // 記錄到瀏覽器控制台（方便複製）
-    console.log('=== ATM Payment Debug Info ===');
-    console.log('MerchantTradeNo:', merchantTradeNo);
-    console.log('Calculated CheckMacValue:', calculatedCheckMacValue);
-    console.log('Parameters used for calculation:', params);
-    console.log('All parameters sent:', allParams);
 
     // 提交表單
     form.submit();
