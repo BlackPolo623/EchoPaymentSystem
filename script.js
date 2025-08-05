@@ -258,8 +258,12 @@ function processATMPayment(account, amount) {
     const calculatedCheckMacValue = generateCheckMacValue(params);
     params.CheckMacValue = calculatedCheckMacValue;
 
-    // 記錄送出的檢查碼到伺服器
-    logSentCheckMacValue(merchantTradeNo, calculatedCheckMacValue, params);
+    // 彈窗顯示計算出來的CheckMacValue
+    alert(`ATM付款資訊：
+交易編號: ${merchantTradeNo}
+計算出的CheckMacValue: ${calculatedCheckMacValue}
+參數數量: ${Object.keys(params).length}
+點擊確定繼續付款...`);
 
     // 合併所有參數
     const allParams = {...params, ...atmExtraParams};
@@ -282,39 +286,15 @@ function processATMPayment(account, amount) {
         }
     }
 
-    // 提交表單
-    form.submit();
-
-    // 記錄到瀏覽器控制台
+    // 記錄到瀏覽器控制台（方便複製）
     console.log('=== ATM Payment Debug Info ===');
     console.log('MerchantTradeNo:', merchantTradeNo);
     console.log('Calculated CheckMacValue:', calculatedCheckMacValue);
     console.log('Parameters used for calculation:', params);
     console.log('All parameters sent:', allParams);
-}
 
-// 記錄送出的檢查碼到伺服器
-async function logSentCheckMacValue(tradeNo, checkMacValue, params) {
-    try {
-        const logData = {
-            action: 'log_sent_checkmac',
-            tradeNo: tradeNo,
-            sentCheckMacValue: checkMacValue,
-            sentParams: params,
-            timestamp: new Date().toISOString()
-        };
-
-        // 發送到記錄檔案
-        await fetch('log_sent_checkmac.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(logData)
-        });
-    } catch (error) {
-        console.error('Failed to log sent CheckMacValue:', error);
-    }
+    // 提交表單
+    form.submit();
 }
 
 function get_money() {
