@@ -1,6 +1,6 @@
 <?php
 // funpoint_payment_notify.php
-// 修正版本：針對ATM付款回傳參數進行特殊處理
+// 修正版本：使用送出時的相同參數進行驗算
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -44,8 +44,8 @@ $receivedCheckMacValue = $receivedData['CheckMacValue'];
 $paymentType = detectPaymentType($receivedData);
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
-// 計算檢查碼
-$calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId, $paymentType);
+// 計算檢查碼：使用送出時的相同參數結構
+$calculatedCheckMacValue = calculateCheckMacValueBySentParams($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId, $paymentType);
 
 logTransaction($transactionId, 'DEBUG', "CheckMacValue comparison - Received: {$receivedCheckMacValue}, Calculated: {$calculatedCheckMacValue}");
 
@@ -163,7 +163,7 @@ echo '1|OK';
  */
 function detectPaymentType($receivedData) {
     // ATM付款的特徵參數
-    $atmIndicators = ['ATMAccBank', 'ATMAccNo', 'PaymentNo'];
+    $atmIndicators = ['ATMAccBank', 'ATMAccNo'];
 
     foreach ($atmIndicators as $indicator) {
         if (isset($receivedData[$indicator]) && !empty($receivedData[$indicator])) {
@@ -175,87 +175,78 @@ function detectPaymentType($receivedData) {
 }
 
 /**
- * 計算檢查碼 - 根據付款方式使用不同策略
+ * 根據送出時參與檢查碼計算的參數來驗證
  */
-function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId, $paymentType) {
+function calculateCheckMacValueBySentParams($receivedData, $hashKey, $hashIV, $transactionId, $paymentType) {
     if ($paymentType === 'ATM') {
-        return calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
+        // ATM：只取送出時參與檢查碼計算的參數
+        $sentParamsKeys = [
+            'MerchantID',
+            'MerchantTradeNo',
+            'MerchantTradeDate',
+            'PaymentType',
+            'TotalAmount',  // 注意：回傳時是TradeAmt
+            'TradeDesc',
+            'ItemName',
+            'ReturnURL',
+            'ChoosePayment',
+            'ClientBackURL',
+            'EncryptType',
+            'CustomField1',
+            'CustomField2',
+            'CustomField3',
+            'CustomField4',
+            'ExpireDate'
+        ];
+
+        $sentParams = [
+            'MerchantID' => $receivedData['MerchantID'] ?? '',
+            'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
+            'MerchantTradeDate' => $receivedData['MerchantTradeDate'] ?? '',
+            'PaymentType' => 'aio',
+            'TotalAmount' => $receivedData['TradeAmt'] ?? '', // 回傳TradeAmt對應送出TotalAmount
+            'TradeDesc' => '腳本開發服務',
+            'ItemName' => '腳本開發服務',
+            'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php',
+            'ChoosePayment' => 'ATM',
+            'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
+            'EncryptType' => '1',
+            'CustomField1' => $receivedData['CustomField1'] ?? '',
+            'CustomField2' => $receivedData['CustomField2'] ?? '',
+            'CustomField3' => $receivedData['CustomField3'] ?? '',
+            'CustomField4' => $receivedData['CustomField4'] ?? '',
+            'ExpireDate' => '3'
+        ];
     } else {
-        return calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
+        // 信用卡：只取送出時參與檢查碼計算的參數
+        $sentParams = [
+            'MerchantID' => $receivedData['MerchantID'] ?? '',
+            'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
+            'MerchantTradeDate' => $receivedData['MerchantTradeDate'] ?? '',
+            'PaymentType' => 'aio',
+            'TotalAmount' => $receivedData['TradeAmt'] ?? '',
+            'TradeDesc' => '腳本開發服務',
+            'ItemName' => '腳本開發服務',
+            'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php',
+            'ChoosePayment' => 'Credit',
+            'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
+            'OrderResultURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/payment_result.php',
+            'EncryptType' => '1',
+            'CustomField1' => $receivedData['CustomField1'] ?? ''
+        ];
     }
-}
 
-/**
- * 信用卡檢查碼計算 - 使用所有回傳參數
- */
-function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // 移除CheckMacValue參數
-    $params = $receivedData;
-    unset($params['CheckMacValue']);
-
-    logTransaction($transactionId, 'DEBUG', "Credit parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
-
-    return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
-}
-
-/**
- * ATM檢查碼計算 - 特殊處理
- */
-function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // ATM付款時，只使用基本的回傳參數進行檢查碼計算
-    // 根據官方文件，ATM付款回傳時會包含額外參數，但檢查碼計算可能只包含基本參數
-
-    $basicParams = [
-        'MerchantID' => $receivedData['MerchantID'] ?? '',
-        'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
-        'RtnCode' => $receivedData['RtnCode'] ?? '',
-        'RtnMsg' => $receivedData['RtnMsg'] ?? '',
-        'TradeNo' => $receivedData['TradeNo'] ?? '',
-        'TradeAmt' => $receivedData['TradeAmt'] ?? '',
-        'PaymentDate' => $receivedData['PaymentDate'] ?? '',
-        'PaymentType' => $receivedData['PaymentType'] ?? '',
-        'PaymentTypeChargeFee' => $receivedData['PaymentTypeChargeFee'] ?? '',
-        'TradeDate' => $receivedData['TradeDate'] ?? '',
-        'SimulatePaid' => $receivedData['SimulatePaid'] ?? '',
-        'CustomField1' => $receivedData['CustomField1'] ?? '',
-        'CustomField2' => $receivedData['CustomField2'] ?? '',
-        'CustomField3' => $receivedData['CustomField3'] ?? '',
-        'CustomField4' => $receivedData['CustomField4'] ?? ''
-    ];
-
-    // 移除空值參數
+    // 移除空值參數（保持和送出時一致）
     $filteredParams = [];
-    foreach ($basicParams as $key => $value) {
+    foreach ($sentParams as $key => $value) {
         if ($value !== '' && $value !== null) {
             $filteredParams[$key] = $value;
         }
     }
 
-    logTransaction($transactionId, 'DEBUG', "ATM basic parameters: " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
+    logTransaction($transactionId, 'DEBUG', "Extracted params that participated in CheckMacValue calculation for {$paymentType}: " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
 
-    // 如果基本參數計算失敗，嘗試使用所有非空參數
-    $checkMac1 = calculateOfficialCheckMacValue($filteredParams, $hashKey, $hashIV, $transactionId);
-
-    // 備用方案：使用所有回傳參數（除了CheckMacValue）
-    $allParams = $receivedData;
-    unset($allParams['CheckMacValue']);
-
-    // 移除空值
-    $allFilteredParams = [];
-    foreach ($allParams as $key => $value) {
-        if ($value !== '' && $value !== null) {
-            $allFilteredParams[$key] = $value;
-        }
-    }
-
-    logTransaction($transactionId, 'DEBUG', "ATM all parameters: " . json_encode($allFilteredParams, JSON_UNESCAPED_UNICODE));
-    $checkMac2 = calculateOfficialCheckMacValue($allFilteredParams, $hashKey, $hashIV, $transactionId);
-
-    logTransaction($transactionId, 'DEBUG', "ATM CheckMac1 (basic): {$checkMac1}");
-    logTransaction($transactionId, 'DEBUG', "ATM CheckMac2 (all): {$checkMac2}");
-
-    // 先嘗試基本參數的檢查碼
-    return $checkMac1;
+    return calculateOfficialCheckMacValue($filteredParams, $hashKey, $hashIV, $transactionId);
 }
 
 /**

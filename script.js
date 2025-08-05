@@ -227,7 +227,7 @@ function processATMPayment(account, amount) {
                            now.getMinutes().toString().padStart(2, '0') + ":" +
                            now.getSeconds().toString().padStart(2, '0');
 
-    // 組裝訂單參數 - ATM 專用
+    // 組裝用於計算檢查碼的參數 - 只包含會被計算的參數
     const params = {
         MerchantID: CONFIG.funpoint.MerchantID,
         MerchantTradeNo: merchantTradeNo,
@@ -244,15 +244,21 @@ function processATMPayment(account, amount) {
         CustomField2: "",
         CustomField3: "",
         CustomField4: "",
-        // ATM 專用參數
-        ExpireDate: 3,
-        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
-        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
-        NeedExtraPaidInfo: "N"  // 重要：ATM需要額外付款資訊
+        ExpireDate: 3
     };
 
-    // 計算檢查碼
+    // ATM 專用參數 - 不參與檢查碼計算
+    const atmExtraParams = {
+        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
+        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
+        NeedExtraPaidInfo: "N"
+    };
+
+    // 計算檢查碼 - 只用params
     params.CheckMacValue = generateCheckMacValue(params);
+
+    // 合併所有參數
+    const allParams = {...params, ...atmExtraParams};
 
     // 設置表單值
     const form = document.getElementById('funpoint-ATMpayment-form');
@@ -265,10 +271,10 @@ function processATMPayment(account, amount) {
         }
     });
 
-    // 設置 ATM 參數
-    for (const key in params) {
+    // 設置所有參數
+    for (const key in allParams) {
         if (form.elements[key]) {
-            form.elements[key].value = params[key];
+            form.elements[key].value = allParams[key];
         }
     }
 
