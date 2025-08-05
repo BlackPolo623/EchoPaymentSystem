@@ -1,6 +1,6 @@
 <?php
 // funpoint_payment_notify.php
-// 簡化版本：收到什麼就處理什麼，完全按照官方檢查碼機制
+// 修正版本：針對ATM付款回傳參數進行特殊處理
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
@@ -40,12 +40,12 @@ if (!isset($receivedData['CheckMacValue'])) {
 
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 
-// 簡單判斷付款方式（僅用於日誌）
-$paymentType = (isset($receivedData['ATMAccBank']) && !empty($receivedData['ATMAccBank'])) ? 'ATM' : 'CREDIT';
+// 判斷付款方式
+$paymentType = detectPaymentType($receivedData);
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
-// 計算檢查碼：除了CheckMacValue，其他全部參與計算
-$calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
+// 計算檢查碼
+$calculatedCheckMacValue = calculateCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId, $paymentType);
 
 logTransaction($transactionId, 'DEBUG', "CheckMacValue comparison - Received: {$receivedCheckMacValue}, Calculated: {$calculatedCheckMacValue}");
 
@@ -159,19 +159,28 @@ try {
 echo '1|OK';
 
 /**
+ * 偵測付款方式
+ */
+function detectPaymentType($receivedData) {
+    // ATM付款的特徵參數
+    $atmIndicators = ['ATMAccBank', 'ATMAccNo', 'PaymentNo'];
+
+    foreach ($atmIndicators as $indicator) {
+        if (isset($receivedData[$indicator]) && !empty($receivedData[$indicator])) {
+            return 'ATM';
+        }
+    }
+
+    return 'CREDIT';
+}
+
+/**
  * 計算檢查碼 - 根據付款方式使用不同策略
  */
-function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // 判斷付款方式
-    $isATM = (isset($receivedData['ATMAccBank']) && !empty($receivedData['ATMAccBank']));
-
-    if ($isATM) {
-        // ATM付款：歐付寶只回傳部分參數，需要重建送出時的參數結構
-        logTransaction($transactionId, 'DEBUG', "ATM payment: rebuilding original sent parameters");
+function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId, $paymentType) {
+    if ($paymentType === 'ATM') {
         return calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
     } else {
-        // 信用卡付款：使用回傳的所有參數
-        logTransaction($transactionId, 'DEBUG', "Credit payment: using all received parameters");
         return calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId);
     }
 }
@@ -180,44 +189,79 @@ function calculateCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId
  * 信用卡檢查碼計算 - 使用所有回傳參數
  */
 function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // Step 1: 移除CheckMacValue參數
+    // 移除CheckMacValue參數
     $params = $receivedData;
     unset($params['CheckMacValue']);
 
-    logTransaction($transactionId, 'DEBUG', "Credit parameters count: " . count($params));
-    logTransaction($transactionId, 'DEBUG', "Credit filtered parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
-    // Step 2-8: 按照官方規範計算
+    logTransaction($transactionId, 'DEBUG', "Credit parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+
     return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
 }
 
 /**
- * ATM檢查碼計算 - 嘗試使用回傳參數但過濾空值
+ * ATM檢查碼計算 - 特殊處理
  */
 function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // 策略：使用回傳的參數，但只保留有值的參數
-    $params = $receivedData;
-    unset($params['CheckMacValue']);
+    // ATM付款時，只使用基本的回傳參數進行檢查碼計算
+    // 根據官方文件，ATM付款回傳時會包含額外參數，但檢查碼計算可能只包含基本參數
 
-    // 過濾空值參數
+    $basicParams = [
+        'MerchantID' => $receivedData['MerchantID'] ?? '',
+        'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
+        'RtnCode' => $receivedData['RtnCode'] ?? '',
+        'RtnMsg' => $receivedData['RtnMsg'] ?? '',
+        'TradeNo' => $receivedData['TradeNo'] ?? '',
+        'TradeAmt' => $receivedData['TradeAmt'] ?? '',
+        'PaymentDate' => $receivedData['PaymentDate'] ?? '',
+        'PaymentType' => $receivedData['PaymentType'] ?? '',
+        'PaymentTypeChargeFee' => $receivedData['PaymentTypeChargeFee'] ?? '',
+        'TradeDate' => $receivedData['TradeDate'] ?? '',
+        'SimulatePaid' => $receivedData['SimulatePaid'] ?? '',
+        'CustomField1' => $receivedData['CustomField1'] ?? '',
+        'CustomField2' => $receivedData['CustomField2'] ?? '',
+        'CustomField3' => $receivedData['CustomField3'] ?? '',
+        'CustomField4' => $receivedData['CustomField4'] ?? ''
+    ];
+
+    // 移除空值參數
     $filteredParams = [];
-    foreach ($params as $key => $value) {
+    foreach ($basicParams as $key => $value) {
         if ($value !== '' && $value !== null) {
             $filteredParams[$key] = $value;
         }
     }
 
-    logTransaction($transactionId, 'DEBUG', "ATM non-empty parameters count: " . count($filteredParams));
-    logTransaction($transactionId, 'DEBUG', "ATM filtered parameters: " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
+    logTransaction($transactionId, 'DEBUG', "ATM basic parameters: " . json_encode($filteredParams, JSON_UNESCAPED_UNICODE));
 
-    // 按照官方規範計算
-    return calculateOfficialCheckMacValue($filteredParams, $hashKey, $hashIV, $transactionId);
+    // 如果基本參數計算失敗，嘗試使用所有非空參數
+    $checkMac1 = calculateOfficialCheckMacValue($filteredParams, $hashKey, $hashIV, $transactionId);
+
+    // 備用方案：使用所有回傳參數（除了CheckMacValue）
+    $allParams = $receivedData;
+    unset($allParams['CheckMacValue']);
+
+    // 移除空值
+    $allFilteredParams = [];
+    foreach ($allParams as $key => $value) {
+        if ($value !== '' && $value !== null) {
+            $allFilteredParams[$key] = $value;
+        }
+    }
+
+    logTransaction($transactionId, 'DEBUG', "ATM all parameters: " . json_encode($allFilteredParams, JSON_UNESCAPED_UNICODE));
+    $checkMac2 = calculateOfficialCheckMacValue($allFilteredParams, $hashKey, $hashIV, $transactionId);
+
+    logTransaction($transactionId, 'DEBUG', "ATM CheckMac1 (basic): {$checkMac1}");
+    logTransaction($transactionId, 'DEBUG', "ATM CheckMac2 (all): {$checkMac2}");
+
+    // 先嘗試基本參數的檢查碼
+    return $checkMac1;
 }
 
 /**
  * 官方規範檢查碼計算
  */
 function calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId) {
-
     // Step 1: 按照英文字母順序排序
     ksort($params);
 
