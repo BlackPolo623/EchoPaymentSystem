@@ -239,16 +239,14 @@ function processATMPayment(account, amount) {
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "ATM",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
+        //OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: account,
-        CustomField2: "",
-        CustomField3: "",
-        CustomField4: "",
-        // ATM 專用參數
+        // ATM 專用參數 1
         ExpireDate: 3,
         PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
         ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
-        NeedExtraPaidInfo: "N"  // 重要：ATM需要額外付款資訊
+        NeedExtraPaidInfo: "N"
     };
 
     // 計算檢查碼
