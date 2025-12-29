@@ -1,8 +1,4 @@
 <?php
-// ============================================
-// 迴響電競訂單後台 - 登入驗證
-// php/admin/auth.php
-// ============================================
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/functions.php';
