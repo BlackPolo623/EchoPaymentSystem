@@ -172,6 +172,7 @@ function processFunpointPayment(amount) {
                            now.getSeconds().toString().padStart(2, '0');
 
     // 組裝訂單參數
+    // 組裝訂單參數 - ATM 專用
     const params = {
         MerchantID: CONFIG.funpoint.MerchantID,
         MerchantTradeNo: merchantTradeNo,
@@ -181,11 +182,13 @@ function processFunpointPayment(amount) {
         TradeDesc: "Echo Payment Service",
         ItemName: "Echo Payment Service",
         ReturnURL: CONFIG.funpoint.ReturnURL,
-        ChoosePayment: "Credit",
+        ChoosePayment: "ATM",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        OrderResultURL: CONFIG.funpoint.OrderResultURL,
+        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
+        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
         EncryptType: "1",
-        CustomField1: merchantTradeNo  // 改為存儲訂單編號
+        CustomField1: merchantTradeNo,
+        ExpireDate: 3
     };
 
     // 計算檢查碼
