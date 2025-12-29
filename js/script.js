@@ -16,8 +16,8 @@ const CONFIG = {
         ClientBackURL: "https://powerful-island-21172.herokuapp.com/index.html",
         OrderResultURL: "https://powerful-island-21172.herokuapp.com/php/payment_result.php",
         // ATM 專用設定
-        PaymentInfoURL: "https://powerful-island-21172.herokuapp.com/php/payment_info.php",
-        ClientRedirectURL: "https://powerful-island-21172.herokuapp.com/payment_result.php"
+        PaymentInfoURL: "https://powerful-island-21172.herokuapp.com/php/atm_payment_info.php",
+        ClientRedirectURL: "https://powerful-island-21172.herokuapp.com/php/atm_redirect.php"
     },
     // SmilePay設定
     smilepay: {
@@ -54,16 +54,16 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupAmountPresets() {
     const presetBtns = document.querySelectorAll('.preset-btn');
     const amountInput = document.getElementById('amount');
-    
+
     presetBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const value = btn.dataset.amount;
             amountInput.value = value;
-            
+
             // 移除其他按鈕的 active 狀態
             presetBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
+
             // 觸發 input 事件進行驗證
             amountInput.dispatchEvent(new Event('input'));
         });
@@ -233,9 +233,10 @@ function processATMPayment(amount) {
         ItemName: "Echo Payment Service",
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "ATM",
-        ClientBackURL: CONFIG.funpoint.ClientBackURL,
+        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,  // Server端接收取號通知
+        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,  // Client端顯示虛擬帳號頁面
         EncryptType: "1",
-        CustomField1: merchantTradeNo,  // 改為存儲訂單編號
+        CustomField1: merchantTradeNo,
         ExpireDate: 3
     };
 
@@ -270,7 +271,7 @@ function get_money() {
     if (isNaN(amount) || amount < CONFIG.minAmount) {
         return 0; // 金額無效
     }
-    
+
     let count = 1;
     if (document.getElementById("Count")) {
         count = parseInt(document.getElementById("Count").value);
@@ -278,7 +279,7 @@ function get_money() {
             count = 1;
         }
     }
-    
+
     return amount * count;
 }
 
@@ -321,10 +322,10 @@ function showErrorMessage(message) {
         `;
         document.body.appendChild(errorDiv);
     }
-    
+
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
-    
+
     // 3秒後自動隱藏
     setTimeout(() => {
         errorDiv.style.animation = 'slideUp 0.3s ease';

@@ -18,13 +18,13 @@
     <div class="logo-container">
         <div class="logo-icon"></div>
     </div>
-    
+
     <h2><span class="title-text">ECHO PAYMENT</span></h2>
-    
+
     <!-- 金額輸入 -->
     <label for="amount" class="form-label">付款金額</label>
     <input type="number" id="amount" placeholder="請輸入金額" min="100" value="100" step="100"/>
-    
+
     <!-- 金額快選按鈕 -->
     <div class="amount-presets">
         <button type="button" class="preset-btn" data-amount="100">$100</button>
@@ -32,7 +32,7 @@
         <button type="button" class="preset-btn" data-amount="500">$500</button>
         <button type="button" class="preset-btn" data-amount="1000">$1000</button>
     </div>
-    
+
     <!-- 付款方式選擇 -->
     <label for="pay_zg" class="form-label">付款方式</label>
     <select id="pay_zg">
@@ -41,9 +41,9 @@
         <option value="4">🏪 7-11 ibon</option>
         <option value="6">🏪 全家 FamiPort</option>
     </select>
-    
+
     <p class="note-text">💡 最低付款金額：NT$100</p>
-    
+
     <button class="btn-epic" id="submit-btn">確認付款</button>
 </div>
 
@@ -76,7 +76,8 @@
     <input type="hidden" name="ItemName" value="">
     <input type="hidden" name="ReturnURL" value="">
     <input type="hidden" name="ChoosePayment" value="ATM">
-    <input type="hidden" name="ClientBackURL" value="">
+    <input type="hidden" name="PaymentInfoURL" value="">
+    <input type="hidden" name="ClientRedirectURL" value="">
     <input type="hidden" name="EncryptType" value="1">
     <input type="hidden" name="ExpireDate" value="">
     <input type="hidden" name="CustomField1" value="">
