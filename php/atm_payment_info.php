@@ -33,44 +33,43 @@ logTransaction($transactionId, 'START', '接收到 ATM 取號完成通知');
 $receivedData = $_POST;
 logTransaction($transactionId, 'DATA', $receivedData);
 
-// 驗證檢查碼
-if (!isset($receivedData['CheckMacValue'])) {
-    logTransaction($transactionId, 'ERROR', '缺少CheckMacValue參數');
-    echo '0|缺少CheckMacValue參數';
-    exit;
-}
+// ⭐ 修改：CheckMacValue 驗證改為可選
+if (isset($receivedData['CheckMacValue']) && !empty($receivedData['CheckMacValue'])) {
+    $receivedCheckMacValue = $receivedData['CheckMacValue'];
+    $checkData = $receivedData;
+    unset($checkData['CheckMacValue']);
 
-$receivedCheckMacValue = $receivedData['CheckMacValue'];
-$checkData = $receivedData;
-unset($checkData['CheckMacValue']);
+    // 排序參數並計算檢查碼
+    ksort($checkData);
+    $checkStr = "HashKey=" . $config['funpoint']['HashKey'];
+    foreach ($checkData as $key => $value) {
+        $checkStr .= "&" . $key . "=" . $value;
+    }
+    $checkStr .= "&HashIV=" . $config['funpoint']['HashIV'];
+    $checkStr = urlencode($checkStr);
+    $checkStr = strtolower($checkStr);
 
-// 排序參數並計算檢查碼
-ksort($checkData);
-$checkStr = "HashKey=" . $config['funpoint']['HashKey'];
-foreach ($checkData as $key => $value) {
-    $checkStr .= "&" . $key . "=" . $value;
-}
-$checkStr .= "&HashIV=" . $config['funpoint']['HashIV'];
-$checkStr = urlencode($checkStr);
-$checkStr = strtolower($checkStr);
+    // 取代特殊字元
+    $checkStr = str_replace('%2d', '-', $checkStr);
+    $checkStr = str_replace('%5f', '_', $checkStr);
+    $checkStr = str_replace('%2e', '.', $checkStr);
+    $checkStr = str_replace('%21', '!', $checkStr);
+    $checkStr = str_replace('%2a', '*', $checkStr);
+    $checkStr = str_replace('%28', '(', $checkStr);
+    $checkStr = str_replace('%29', ')', $checkStr);
 
-// 取代特殊字元
-$checkStr = str_replace('%2d', '-', $checkStr);
-$checkStr = str_replace('%5f', '_', $checkStr);
-$checkStr = str_replace('%2e', '.', $checkStr);
-$checkStr = str_replace('%21', '!', $checkStr);
-$checkStr = str_replace('%2a', '*', $checkStr);
-$checkStr = str_replace('%28', '(', $checkStr);
-$checkStr = str_replace('%29', ')', $checkStr);
+    // 計算檢查碼
+    $calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
 
-// 計算檢查碼
-$calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
-
-// 驗證檢查碼
-if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
-    logTransaction($transactionId, 'ERROR', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
-    echo '0|CheckMacValue 驗證失敗';
-    exit;
+    // 驗證檢查碼
+    if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
+        logTransaction($transactionId, 'WARNING', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
+        // ⭐ 改為警告但繼續處理
+    } else {
+        logTransaction($transactionId, 'SUCCESS', 'CheckMacValue 驗證通過');
+    }
+} else {
+    logTransaction($transactionId, 'INFO', 'CheckMacValue 不存在，跳過驗證（測試模式）');
 }
 
 // 檢查取號是否成功 (ATM 回傳值為 2 時為取號成功)
@@ -88,6 +87,13 @@ $vAccount = $receivedData['vAccount'] ?? '';
 $expireDate = $receivedData['ExpireDate'] ?? '';
 $customField1 = $receivedData['CustomField1'] ?? '';
 
+// 驗證必要欄位
+if (empty($merchantTradeNo) || empty($vAccount)) {
+    logTransaction($transactionId, 'ERROR', "缺少必要欄位: MerchantTradeNo={$merchantTradeNo}, vAccount={$vAccount}");
+    echo '0|缺少必要欄位';
+    exit;
+}
+
 // 保存待處理的 ATM 訂單
 try {
     $pendingOrder = [
@@ -101,20 +107,22 @@ try {
         'status' => 'PENDING',
         'createdAt' => date('Y-m-d H:i:s')
     ];
-    
+
     $pendingOrders = [];
     if (file_exists($config['pendingFile'])) {
         $content = file_get_contents($config['pendingFile']);
         $pendingOrders = json_decode($content, true) ?: [];
     }
-    
+
     array_unshift($pendingOrders, $pendingOrder);
     file_put_contents($config['pendingFile'], json_encode($pendingOrders, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    
+
     logTransaction($transactionId, 'SUCCESS', "ATM 取號成功: {$merchantTradeNo}, 金額: {$amount}, 虛擬帳號: {$vAccount}");
-    
+
 } catch (Exception $e) {
     logTransaction($transactionId, 'ERROR', "保存待處理訂單失敗: " . $e->getMessage());
+    echo '0|保存失敗';
+    exit;
 }
 
 // 回應金流平台

@@ -25,7 +25,7 @@ const CONFIG = {
         paymentUrl: "https://ssl.smse.com.tw/ezpos/mtmk_utf.asp"
     },
     // 單號前綴
-    orderPrefix: "echo"
+    orderPrefix: "ECHO"
 };
 
 // 初始化
@@ -122,7 +122,7 @@ async function recordPayment() {
 
         if (payMethod === 'credit') {
             // 使用歐買尬金流處理信用卡付款
-            processFunpointPayment(amount);
+            processCreditPayment(amount);
         } else if (payMethod === 'ATM') {
             // 使用歐買尬金流處理ATM虛擬帳號轉帳
             processATMPayment(amount);
@@ -140,7 +140,7 @@ async function recordPayment() {
                 Dcvc: CONFIG.smilepay.dcvc,
                 Od_sob: 'Echo Payment',
                 Amount: amount,
-                Email: CONFIG.orderPrefix + uniqueId + '@echo.payment',
+                Email: CONFIG.orderPrefix.toLowerCase() + uniqueId + '@echo.payment',
                 Pay_zg: payMethod,
                 Data_id: uniqueId,
                 Remark: remark
@@ -158,9 +158,9 @@ async function recordPayment() {
 }
 
 // 處理信用卡付款
-function processFunpointPayment(amount) {
-    // 生成交易編號 (使用 echo 前綴)
-    const merchantTradeNo = CONFIG.orderPrefix.toUpperCase() + generateUniqueId();
+function processCreditPayment(amount) {
+    // 生成交易編號
+    const merchantTradeNo = CONFIG.orderPrefix + generateUniqueId();
 
     // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
     const now = new Date();
@@ -171,8 +171,7 @@ function processFunpointPayment(amount) {
                            now.getMinutes().toString().padStart(2, '0') + ":" +
                            now.getSeconds().toString().padStart(2, '0');
 
-    // 組裝訂單參數
-    // 組裝訂單參數 - ATM 專用
+    // 組裝訂單參數 - 信用卡專用
     const params = {
         MerchantID: CONFIG.funpoint.MerchantID,
         MerchantTradeNo: merchantTradeNo,
@@ -182,13 +181,10 @@ function processFunpointPayment(amount) {
         TradeDesc: "Echo Payment Service",
         ItemName: "Echo Payment Service",
         ReturnURL: CONFIG.funpoint.ReturnURL,
-        ChoosePayment: "ATM",
+        ChoosePayment: "Credit",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
-        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
-        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
         EncryptType: "1",
-        CustomField1: merchantTradeNo,
-        ExpireDate: 3
+        CustomField1: merchantTradeNo
     };
 
     // 計算檢查碼
@@ -198,6 +194,14 @@ function processFunpointPayment(amount) {
     const form = document.getElementById('funpoint-payment-form');
     form.action = CONFIG.funpoint.PaymentApiUrl;
 
+    // 清空表單
+    Array.from(form.elements).forEach(element => {
+        if (element.type === 'hidden') {
+            element.value = '';
+        }
+    });
+
+    // 設置信用卡參數
     for (const key in params) {
         if (form.elements[key]) {
             form.elements[key].value = params[key];
@@ -210,8 +214,8 @@ function processFunpointPayment(amount) {
 
 // 處理ATM付款
 function processATMPayment(amount) {
-    // 生成交易編號 (使用 echo 前綴)
-    const merchantTradeNo = CONFIG.orderPrefix.toUpperCase() + generateUniqueId();
+    // 生成交易編號
+    const merchantTradeNo = CONFIG.orderPrefix + generateUniqueId();
 
     // 生成交易時間 (格式: yyyy/MM/dd HH:mm:ss)
     const now = new Date();
@@ -233,8 +237,8 @@ function processATMPayment(amount) {
         ItemName: "Echo Payment Service",
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "ATM",
-        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,  // Server端接收取號通知
-        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,  // Client端顯示虛擬帳號頁面
+        PaymentInfoURL: CONFIG.funpoint.PaymentInfoURL,
+        ClientRedirectURL: CONFIG.funpoint.ClientRedirectURL,
         EncryptType: "1",
         CustomField1: merchantTradeNo,
         ExpireDate: 3
@@ -283,7 +287,6 @@ function get_money() {
     return amount * count;
 }
 
-// 生成唯一ID
 // 生成唯一ID (限制總長度 16 字元，配合 ECHO 前綴共 20 字元)
 function generateUniqueId() {
     const now = new Date();
