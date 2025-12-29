@@ -130,6 +130,16 @@ try {
     if (!$isDuplicate) {
         array_unshift($transactions, $transaction);
         file_put_contents($config['dataFile'], json_encode($transactions, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        $pendingFile = $dataDir . '/pending_atm.json';
+        if (file_exists($pendingFile)) {
+            $pendingOrders = json_decode(file_get_contents($pendingFile), true) ?: [];
+            $pendingOrders = array_filter($pendingOrders, function($order) use ($merchantTradeNo) {
+                return $order['merchantTradeNo'] !== $merchantTradeNo;
+            });
+            file_put_contents($pendingFile, json_encode(array_values($pendingOrders), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        }
+
         logTransaction($transactionId, 'SUCCESS', "成功處理 ATM 交易: {$merchantTradeNo}, 金額: {$amount}");
     } else {
         logTransaction($transactionId, 'INFO', "交易已存在: {$merchantTradeNo}");

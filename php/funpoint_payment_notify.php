@@ -43,8 +43,18 @@ if (!isset($receivedData['CheckMacValue'])) {
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 
 // 判斷付款方式
-$isATM = (isset($receivedData['ATMAccBank']) && !empty($receivedData['ATMAccBank']));
-$paymentType = $isATM ? 'ATM' : 'CREDIT';
+// 判斷付款方式 - 根據 PaymentType 欄位
+$paymentTypeRaw = $receivedData['PaymentType'] ?? '';
+
+if (strpos($paymentTypeRaw, 'ATM') !== false) {
+    $paymentType = 'ATM';
+} elseif (strpos($paymentTypeRaw, 'Credit') !== false) {
+    $paymentType = 'CREDIT';
+} elseif (strpos($paymentTypeRaw, 'CVS') !== false) {
+    $paymentType = 'CVS';
+} else {
+    $paymentType = 'UNKNOWN';
+}
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
 // 計算檢查碼
@@ -122,10 +132,30 @@ try {
     if (!$isDuplicate) {
         // 添加新交易
         array_unshift($transactions, $transaction);
-        
+
         // 保存到檔案
         file_put_contents($config['dataFile'], json_encode($transactions, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        
+
+        $pendingFile = $dataDir . '/pending_atm.json';
+        if (file_exists($pendingFile)) {
+            $pendingOrders = json_decode(file_get_contents($pendingFile), true) ?: [];
+            $originalCount = count($pendingOrders);
+
+            // 過濾掉已完成的訂單
+            $pendingOrders = array_filter($pendingOrders, function($order) use ($merchantTradeNo) {
+                return $order['merchantTradeNo'] !== $merchantTradeNo;
+            });
+
+            $newCount = count($pendingOrders);
+
+            // 重新索引陣列並保存
+            file_put_contents($pendingFile, json_encode(array_values($pendingOrders), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            if ($originalCount > $newCount) {
+                logTransaction($transactionId, 'INFO', "Removed from pending_atm.json: {$merchantTradeNo}");
+            }
+        }
+
         logTransaction($transactionId, 'SUCCESS', "Transaction saved: {$merchantTradeNo}, Amount: {$amount}, Type: {$paymentType}");
     } else {
         logTransaction($transactionId, 'INFO', "Duplicate transaction: {$merchantTradeNo}");
