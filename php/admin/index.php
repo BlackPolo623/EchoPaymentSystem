@@ -303,7 +303,7 @@ $currentTransactions = array_slice($transactions, $offset, $perPage);
 <!-- 登入表單 -->
 <div class="login-container">
     <div class="form-container">
-        <h2><span class="title-text">ADMIN LOGIN</span></h2>
+        <h2><span class="title-text">管理員登陸</span></h2>
         
         <?php if (isset($loginError)): ?>
         <div class="error-alert"><?php echo htmlspecialchars($loginError); ?></div>
@@ -321,7 +321,10 @@ $currentTransactions = array_slice($transactions, $offset, $perPage);
 <!-- 後台主頁 -->
 <div class="admin-wrapper">
     <nav class="admin-nav">
-        <h1 class="admin-title">⚡ ECHO PAYMENT ADMIN</h1>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="../../image/Logo.png" alt="迴響電競 Logo" style="height: 40px;">
+            <h1>迴響電競訂單後台</h1>
+        </div>
         <div>
             <button class="refresh-btn" onclick="location.reload()">🔄 重新整理</button>
             <a href="?logout=1" class="logout-btn">登出</a>
