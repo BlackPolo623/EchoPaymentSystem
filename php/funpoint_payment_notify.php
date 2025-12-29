@@ -152,9 +152,9 @@ function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactio
         'TotalAmount' => $receivedData['TradeAmt'] ?? '',
         'TradeDesc' => 'Echo Payment Service',
         'ItemName' => 'Echo Payment Service',
-        'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/php/funpoint_payment_notify.php',
+        'ReturnURL' => 'https://powerful-island-21172-4afe4be08ab5.herokuapp.com/php/funpoint_payment_notify.php',
         'ChoosePayment' => 'ATM',
-        'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
+        'ClientBackURL' => 'https://powerful-island-21172-4afe4be08ab5.herokuapp.com/index.html',
         'EncryptType' => '1',
         'CustomField1' => $receivedData['CustomField1'] ?? '',
         'ExpireDate' => '3'
