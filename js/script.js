@@ -12,11 +12,11 @@ const CONFIG = {
         HashIV: "tpYEKUQ8D57JyDo0",
         PaymentApiUrl: "https://payment.funpoint.com.tw/Cashier/AioCheckOut/V5",
         // 請更換為實際網站網址
-        ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/php/funpoint_payment_notify.php",
+        ReturnURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php",
         ClientBackURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html",
         OrderResultURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/php/payment_result.php",
         // ATM 專用設定
-        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/php/atm_payment_info.php",
+        PaymentInfoURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/atm_payment_info.php",
         ClientRedirectURL: "https://bachuan-3cdbb7d0b6e7.herokuapp.com/php/atm_redirect.php"
     },
     // SmilePay設定

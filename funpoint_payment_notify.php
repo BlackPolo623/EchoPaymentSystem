@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('error_log', __DIR__ . '/../data/payment_errors.log');
 
 // 確保資料目錄存在
-$dataDir = __DIR__ . '/../data';
+$dataDir = __DIR__ . '/data';
 if (!is_dir($dataDir)) {
     mkdir($dataDir, 0755, true);
 }

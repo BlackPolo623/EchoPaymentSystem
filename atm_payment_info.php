@@ -7,7 +7,7 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 // 確保資料目錄存在
-$dataDir = __DIR__ . '/../data';
+$dataDir = __DIR__ . '/data';
 if (!is_dir($dataDir)) {
     mkdir($dataDir, 0755, true);
 }
