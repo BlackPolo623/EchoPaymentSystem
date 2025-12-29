@@ -280,10 +280,17 @@ function get_money() {
 }
 
 // 生成唯一ID
+// 生成唯一ID (限制總長度 16 字元，配合 ECHO 前綴共 20 字元)
 function generateUniqueId() {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `${timestamp}${random}`;
+    const now = new Date();
+    // 格式: MMDDHHMMSS (10字元) + 隨機6位
+    const dateStr = (now.getMonth() + 1).toString().padStart(2, '0') +
+                    now.getDate().toString().padStart(2, '0') +
+                    now.getHours().toString().padStart(2, '0') +
+                    now.getMinutes().toString().padStart(2, '0') +
+                    now.getSeconds().toString().padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    return `${dateStr}${random}`;
 }
 
 // 顯示錯誤訊息
