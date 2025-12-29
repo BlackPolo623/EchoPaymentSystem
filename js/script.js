@@ -183,6 +183,7 @@ function processCreditPayment(amount) {
         ReturnURL: CONFIG.funpoint.ReturnURL,
         ChoosePayment: "Credit",
         ClientBackURL: CONFIG.funpoint.ClientBackURL,
+        OrderResultURL: CONFIG.funpoint.OrderResultURL,
         EncryptType: "1",
         CustomField1: merchantTradeNo
     };
