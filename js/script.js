@@ -209,6 +209,13 @@ function processCreditPayment(amount) {
         }
     }
 
+    console.log('=== 信用卡表單參數 ===');
+    console.log('Action:', form.action);
+    for (const key in params) {
+        console.log(key + ':', params[key]);
+    }
+    console.log('====================');
+
     // 提交表單
     form.submit();
 }
@@ -265,6 +272,12 @@ function processATMPayment(amount) {
             form.elements[key].value = params[key];
         }
     }
+    console.log('=== ATM 表單參數 ===');
+    console.log('Action:', form.action);
+    for (const key in params) {
+        console.log(key + ':', params[key]);
+    }
+    console.log('====================');
 
     // 提交表單
     form.submit();
