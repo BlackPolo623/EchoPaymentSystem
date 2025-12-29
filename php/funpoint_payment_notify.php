@@ -57,6 +57,8 @@ if (strpos($paymentTypeRaw, 'ATM') !== false) {
 }
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
+$isATM = ($paymentType === 'ATM');
+
 // 計算檢查碼
 if ($isATM) {
     $calculatedCheckMacValue = calculateATMCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
