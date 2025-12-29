@@ -1,10 +1,8 @@
 <?php
 // ============================================
-// Echo Payment System - ATM 取號完成通知處理
-// atm_payment_info.php
+// ATM 取號完成通知處理
 // ============================================
 
-// 設置錯誤日誌
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
@@ -33,13 +31,12 @@ logTransaction($transactionId, 'START', '接收到 ATM 取號完成通知');
 $receivedData = $_POST;
 logTransaction($transactionId, 'DATA', $receivedData);
 
-// ⭐ 修改：CheckMacValue 驗證改為可選
+// CheckMacValue 驗證改為可選
 if (isset($receivedData['CheckMacValue']) && !empty($receivedData['CheckMacValue'])) {
     $receivedCheckMacValue = $receivedData['CheckMacValue'];
     $checkData = $receivedData;
     unset($checkData['CheckMacValue']);
 
-    // 排序參數並計算檢查碼
     ksort($checkData);
     $checkStr = "HashKey=" . $config['funpoint']['HashKey'];
     foreach ($checkData as $key => $value) {
@@ -49,7 +46,6 @@ if (isset($receivedData['CheckMacValue']) && !empty($receivedData['CheckMacValue
     $checkStr = urlencode($checkStr);
     $checkStr = strtolower($checkStr);
 
-    // 取代特殊字元
     $checkStr = str_replace('%2d', '-', $checkStr);
     $checkStr = str_replace('%5f', '_', $checkStr);
     $checkStr = str_replace('%2e', '.', $checkStr);
@@ -58,21 +54,18 @@ if (isset($receivedData['CheckMacValue']) && !empty($receivedData['CheckMacValue
     $checkStr = str_replace('%28', '(', $checkStr);
     $checkStr = str_replace('%29', ')', $checkStr);
 
-    // 計算檢查碼
     $calculatedCheckMacValue = strtoupper(hash('sha256', $checkStr));
 
-    // 驗證檢查碼
     if ($calculatedCheckMacValue !== $receivedCheckMacValue) {
         logTransaction($transactionId, 'WARNING', "CheckMacValue 驗證失敗: 計算值={$calculatedCheckMacValue}, 接收值={$receivedCheckMacValue}");
-        // ⭐ 改為警告但繼續處理
     } else {
         logTransaction($transactionId, 'SUCCESS', 'CheckMacValue 驗證通過');
     }
 } else {
-    logTransaction($transactionId, 'INFO', 'CheckMacValue 不存在，跳過驗證（測試模式）');
+    logTransaction($transactionId, 'INFO', 'CheckMacValue 不存在，跳過驗證');
 }
 
-// 檢查取號是否成功 (ATM 回傳值為 2 時為取號成功)
+// 檢查取號是否成功
 if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '2') {
     logTransaction($transactionId, 'INFO', "ATM 取號未成功: RtnCode=" . ($receivedData['RtnCode'] ?? 'missing'));
     echo '1|OK';
@@ -94,7 +87,7 @@ if (empty($merchantTradeNo) || empty($vAccount)) {
     exit;
 }
 
-// 保存待處理的 ATM 訂單
+// ⭐ 保存待處理的 ATM 訂單
 try {
     $pendingOrder = [
         'id' => $transactionId,
@@ -128,16 +121,10 @@ try {
 // 回應金流平台
 echo '1|OK';
 
-/**
- * 產生唯一交易ID
- */
 function generateTransactionId() {
     return 'ATM_INFO_' . date('YmdHis') . '_' . substr(md5(uniqid()), 0, 8);
 }
 
-/**
- * 記錄交易日誌
- */
 function logTransaction($transactionId, $status, $data) {
     global $dataDir;
     $timestamp = date('Y-m-d H:i:s');
