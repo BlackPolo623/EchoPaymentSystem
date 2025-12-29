@@ -9,6 +9,13 @@ require_once __DIR__ . '/functions.php';
 
 $loginError = null;
 
+// 處理登出
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header('Location: index.php');
+    exit;
+}
+
 // 處理登入
 if (isset($_POST['password'])) {
     if ($_POST['password'] === ADMIN_PASSWORD) {
@@ -17,18 +24,12 @@ if (isset($_POST['password'])) {
         exit;
     } else {
         $loginError = '密碼錯誤';
+        // 繼續往下顯示登入表單
     }
 }
 
-// 處理登出
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: index.php');
-    exit;
-}
-
-// 如果未登入且不是登入請求，顯示登入頁面
-if (!isLoggedIn() && !isset($_POST['password'])) {
+// ⭐ 修正：只要未登入就顯示表單（無論是否有 POST）
+if (!isLoggedIn()) {
     ?>
     <!DOCTYPE html>
     <html lang="zh-TW">
@@ -59,6 +60,12 @@ if (!isLoggedIn() && !isset($_POST['password'])) {
                 border-radius: 10px;
                 margin-bottom: 20px;
                 text-align: center;
+                animation: shake 0.5s;
+            }
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-10px); }
+                75% { transform: translateX(10px); }
             }
         </style>
     </head>
@@ -69,11 +76,11 @@ if (!isLoggedIn() && !isset($_POST['password'])) {
                     <img src="../../image/Logo.png" alt="迴響電競 Logo" style="max-width: 150px; height: auto;">
                 </div>
                 <h2><span class="title-text">管理員登陸</span></h2>
-                
+
                 <?php if ($loginError): ?>
-                <div class="error-alert"><?php echo htmlspecialchars($loginError); ?></div>
+                <div class="error-alert">❌ <?php echo htmlspecialchars($loginError); ?></div>
                 <?php endif; ?>
-                
+
                 <form method="POST" action="">
                     <label for="password" class="form-label">管理員密碼</label>
                     <input type="password" id="password" name="password" placeholder="請輸入密碼" required autofocus>
