@@ -1,26 +1,28 @@
 <?php
+// ============================================
+// Echo Payment System - 金流通知處理
 // funpoint_payment_notify.php
-// 修正版本：只修正 ATM 付款的檢查碼計算問題
+// 接收歐買尬金流回調並記錄到檔案
+// ============================================
 
 // 設置錯誤日誌
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
-ini_set('error_log', 'payment_errors.log');
+ini_set('error_log', __DIR__ . '/../data/payment_errors.log');
+
+// 確保資料目錄存在
+$dataDir = __DIR__ . '/../data';
+if (!is_dir($dataDir)) {
+    mkdir($dataDir, 0755, true);
+}
 
 // 載入配置
 $config = [
-    'db' => [
-        'host' => '125.228.68.9',
-        'port' => '3306',
-        'name' => 'l2jmobius_homunculus',
-        'user' => 'payment',
-        'pass' => 'x4ci3i7q',
-        'charset' => 'utf8mb4'
-    ],
     'funpoint' => [
         'HashKey' => 'cUHKRU04BaDCprxJ',
         'HashIV' => 'tpYEKUQ8D57JyDo0'
-    ]
+    ],
+    'dataFile' => $dataDir . '/transactions.json'
 ];
 
 // 開始記錄交易
@@ -47,10 +49,8 @@ logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
 // 計算檢查碼
 if ($isATM) {
-    // ATM 付款：使用送出時的參數結構
     $calculatedCheckMacValue = calculateATMCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
 } else {
-    // 信用卡付款：保持原本的邏輯（使用所有回傳參數）
     $calculatedCheckMacValue = calculateCreditCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
 }
 
@@ -72,18 +72,12 @@ if (!isset($receivedData['RtnCode']) || $receivedData['RtnCode'] !== '1') {
     exit;
 }
 
-// 1. 從自訂欄位取得用戶帳號
-$account = $receivedData['CustomField1'] ?? '';
-if (empty($account)) {
-    logTransaction($transactionId, 'ERROR', "User account not found");
-    echo '0|User account not found';
-    exit;
-}
-
-// 2. 獲取交易資料
+// 獲取交易資料
 $merchantTradeNo = $receivedData['MerchantTradeNo'] ?? '';
 $amount = isset($receivedData['TradeAmt']) ? intval($receivedData['TradeAmt']) : 0;
-$remark = "Funpoint payment ({$paymentType}) - " . date('Y-m-d H:i:s');
+$tradeNo = $receivedData['TradeNo'] ?? '';
+$paymentDate = $receivedData['PaymentDate'] ?? date('Y-m-d H:i:s');
+$customField1 = $receivedData['CustomField1'] ?? '';
 
 // 驗證交易數據
 if (empty($merchantTradeNo) || $amount <= 0) {
@@ -92,73 +86,54 @@ if (empty($merchantTradeNo) || $amount <= 0) {
     exit;
 }
 
-// 3. 處理交易
+// 記錄交易到 JSON 檔案
 try {
-    // 創建數據庫連接
-    $dsn = "mysql:host={$config['db']['host']};port={$config['db']['port']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
-    $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
+    $transaction = [
+        'id' => $transactionId,
+        'merchantTradeNo' => $merchantTradeNo,
+        'tradeNo' => $tradeNo,
+        'amount' => $amount,
+        'paymentType' => $paymentType,
+        'paymentDate' => $paymentDate,
+        'customField1' => $customField1,
+        'status' => 'SUCCESS',
+        'rtnCode' => $receivedData['RtnCode'] ?? '',
+        'rtnMsg' => $receivedData['RtnMsg'] ?? '',
+        'createdAt' => date('Y-m-d H:i:s'),
+        'rawData' => $receivedData
     ];
-
-    $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], $options);
-
-    // 開始交易
-    $pdo->beginTransaction();
-
-    // 首先檢查該交易是否已經處理過
-    $stmt = $pdo->prepare("SELECT BillID FROM autodonater WHERE TradeNo = :tradeNo LIMIT 1");
-    $stmt->execute(['tradeNo' => $merchantTradeNo]);
-
-    if ($stmt->rowCount() > 0) {
-        // 交易已存在，避免重複處理
-        logTransaction($transactionId, 'INFO', "Transaction already exists: {$merchantTradeNo}");
-        $pdo->commit();
-        echo '1|OK';
-        exit;
+    
+    // 讀取現有交易記錄
+    $transactions = [];
+    if (file_exists($config['dataFile'])) {
+        $content = file_get_contents($config['dataFile']);
+        $transactions = json_decode($content, true) ?: [];
     }
-
-    // 驗證賬號是否存在
-    $stmt = $pdo->prepare("SELECT login FROM accounts WHERE login = :account LIMIT 1");
-    $stmt->execute(['account' => $account]);
-
-    if ($stmt->rowCount() == 0) {
-        // 賬號不存在
-        logTransaction($transactionId, 'ERROR', "Account does not exist: {$account}");
-        $pdo->rollBack();
-        echo '0|Account does not exist';
-        exit;
+    
+    // 檢查是否重複交易
+    $isDuplicate = false;
+    foreach ($transactions as $t) {
+        if ($t['merchantTradeNo'] === $merchantTradeNo) {
+            $isDuplicate = true;
+            break;
+        }
     }
-
-    // 插入交易記錄
-    $stmt = $pdo->prepare("
-        INSERT INTO autodonater (money, accountID, isSent, Note, TradeNo)
-        VALUES (:money, :accountID, 1, :note, :tradeNo)
-    ");
-
-    $stmt->execute([
-        'money' => $amount,
-        'accountID' => $account,
-        'note' => $remark,
-        'tradeNo' => $merchantTradeNo
-    ]);
-
-    // 提交交易
-    $pdo->commit();
-
-    // 記錄成功
-    logTransaction($transactionId, 'SUCCESS', "Successfully processed funpoint transaction ({$paymentType}): {$merchantTradeNo}, Account: {$account}, Amount: {$amount}");
-
-} catch (PDOException $e) {
-    // 回滾交易
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
+    
+    if (!$isDuplicate) {
+        // 添加新交易
+        array_unshift($transactions, $transaction);
+        
+        // 保存到檔案
+        file_put_contents($config['dataFile'], json_encode($transactions, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        
+        logTransaction($transactionId, 'SUCCESS', "Transaction saved: {$merchantTradeNo}, Amount: {$amount}, Type: {$paymentType}");
+    } else {
+        logTransaction($transactionId, 'INFO', "Duplicate transaction: {$merchantTradeNo}");
     }
-
-    // 記錄錯誤
-    logTransaction($transactionId, 'ERROR', "Database error: " . $e->getMessage());
-    echo '0|Database error';
+    
+} catch (Exception $e) {
+    logTransaction($transactionId, 'ERROR', "Failed to save transaction: " . $e->getMessage());
+    echo '0|Save error';
     exit;
 }
 
@@ -166,27 +141,23 @@ try {
 echo '1|OK';
 
 /**
- * ATM 檢查碼計算 - 根據送出時的參數結構重建
+ * ATM 檢查碼計算
  */
 function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // 根據 JavaScript processATMPayment 函數中實際送出的參數結構重建
-    // 注意：只包含 JavaScript 中實際設定的參數
     $sentParams = [
         'MerchantID' => $receivedData['MerchantID'] ?? '',
         'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
-        'MerchantTradeDate' => $receivedData['MerchantTradeDate'] ?? '',  // 使用回傳的值
+        'MerchantTradeDate' => $receivedData['MerchantTradeDate'] ?? '',
         'PaymentType' => 'aio',
-        'TotalAmount' => $receivedData['TradeAmt'] ?? '',  // 回傳用 TradeAmt，送出用 TotalAmount
-        'TradeDesc' => '腳本開發服務',
-        'ItemName' => '腳本開發服務',
-        'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php',
+        'TotalAmount' => $receivedData['TradeAmt'] ?? '',
+        'TradeDesc' => 'Echo Payment Service',
+        'ItemName' => 'Echo Payment Service',
+        'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/php/funpoint_payment_notify.php',
         'ChoosePayment' => 'ATM',
         'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
         'EncryptType' => '1',
         'CustomField1' => $receivedData['CustomField1'] ?? '',
         'ExpireDate' => '3'
-        // 注意：JavaScript 中註解掉的參數這裡也不包含
-        // PaymentInfoURL, ClientRedirectURL, NeedExtraPaidInfo 都不包含
     ];
 
     logTransaction($transactionId, 'DEBUG', "ATM sent parameters reconstructed: " . json_encode($sentParams, JSON_UNESCAPED_UNICODE));
@@ -195,15 +166,13 @@ function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactio
 }
 
 /**
- * 信用卡檢查碼計算 - 保持原本邏輯
+ * 信用卡檢查碼計算
  */
 function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    // 移除CheckMacValue參數，使用所有其他回傳參數
     $params = $receivedData;
     unset($params['CheckMacValue']);
 
     logTransaction($transactionId, 'DEBUG', "Credit parameters count: " . count($params));
-    logTransaction($transactionId, 'DEBUG', "Credit filtered parameters: " . json_encode($params, JSON_UNESCAPED_UNICODE));
 
     return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
 }
@@ -212,11 +181,8 @@ function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transac
  * 官方規範檢查碼計算
  */
 function calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId) {
-
-    // Step 1: 按照英文字母順序排序
     ksort($params);
 
-    // Step 2: 串連參數
     $paramString = '';
     foreach ($params as $key => $value) {
         if ($paramString !== '') {
@@ -225,24 +191,10 @@ function calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transaction
         $paramString .= $key . '=' . $value;
     }
 
-    logTransaction($transactionId, 'DEBUG', "Sorted parameter string: " . $paramString);
-
-    // Step 3: 前面加HashKey，後面加HashIV
     $checkString = "HashKey=" . $hashKey . "&" . $paramString . "&HashIV=" . $hashIV;
-
-    logTransaction($transactionId, 'DEBUG', "String with HashKey and HashIV: " . $checkString);
-
-    // Step 4: URL encode
     $encodedString = urlencode($checkString);
-
-    logTransaction($transactionId, 'DEBUG', "URL encoded string: " . $encodedString);
-
-    // Step 5: 轉小寫
     $lowerString = strtolower($encodedString);
 
-    logTransaction($transactionId, 'DEBUG', "Lowercase string: " . $lowerString);
-
-    // Step 6: 字元替換（按照官方文件）
     $replacedString = $lowerString;
     $str_replacements = [
         '%2d' => '-',
@@ -258,18 +210,11 @@ function calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transaction
         $replacedString = str_replace($search, $replace, $replacedString);
     }
 
-    logTransaction($transactionId, 'DEBUG', "After character replacement: " . $replacedString);
-
-    // Step 7: SHA256加密並轉大寫
-    $hash = strtoupper(hash('sha256', $replacedString));
-
-    logTransaction($transactionId, 'DEBUG', "Final CheckMacValue: " . $hash);
-
-    return $hash;
+    return strtoupper(hash('sha256', $replacedString));
 }
 
 /**
- * 產生唯一交易ID用於日誌追蹤
+ * 產生唯一交易ID
  */
 function generateTransactionId() {
     return 'NOTIFY_' . date('YmdHis') . '_' . substr(md5(uniqid()), 0, 8);
@@ -279,9 +224,10 @@ function generateTransactionId() {
  * 記錄交易日誌
  */
 function logTransaction($transactionId, $status, $data) {
+    global $dataDir;
     $timestamp = date('Y-m-d H:i:s');
     $dataStr = is_array($data) ? json_encode($data, JSON_UNESCAPED_UNICODE) : $data;
     $logMessage = "[$timestamp][$transactionId][$status] $dataStr\n";
-    file_put_contents('funpoint_payment_notify.log', $logMessage, FILE_APPEND);
+    file_put_contents($dataDir . '/funpoint_payment_notify.log', $logMessage, FILE_APPEND);
 }
 ?>

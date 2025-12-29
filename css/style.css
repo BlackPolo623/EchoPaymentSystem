@@ -1,0 +1,915 @@
+/* ============================================
+   Echo Payment System - Modern Tech Theme
+   淡藍色、暗色、現代科技感主題
+   ============================================ */
+
+:root {
+    /* 主色調 - 淡藍色系 */
+    --primary-color: #00d4ff;
+    --primary-light: #5ce1ff;
+    --primary-dark: #0099cc;
+    --secondary-color: #0066ff;
+    --accent-color: #00ffcc;
+    --accent-glow: rgba(0, 212, 255, 0.5);
+    
+    /* 背景色 - 深色科技感 */
+    --bg-dark: #0a0e17;
+    --bg-darker: #060910;
+    --bg-card: rgba(13, 21, 35, 0.95);
+    --bg-card-hover: rgba(18, 28, 45, 0.98);
+    --bg-input: rgba(8, 15, 28, 0.9);
+    
+    /* 文字色 */
+    --text-primary: #e8f4ff;
+    --text-secondary: #8ba3c7;
+    --text-muted: #5a7194;
+    
+    /* 邊框色 */
+    --border-color: rgba(0, 212, 255, 0.2);
+    --border-hover: rgba(0, 212, 255, 0.5);
+    
+    /* 成功/錯誤色 */
+    --success-color: #00ff88;
+    --error-color: #ff4466;
+    --warning-color: #ffaa00;
+    
+    /* 動畫速度 */
+    --animation-speed: 0.3s;
+    --animation-slow: 0.6s;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* 全局字體 */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono&display=swap');
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+    font-family: 'Rajdhani', sans-serif;
+    background-color: var(--bg-dark);
+    overflow-x: hidden;
+    cursor: none;
+    color: var(--text-primary);
+}
+
+/* 動態科技背景 */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(ellipse at 20% 20%, rgba(0, 102, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(0, 255, 204, 0.05) 0%, transparent 70%),
+        linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-dark) 50%, var(--bg-darker) 100%);
+    z-index: -2;
+}
+
+/* 網格線背景 */
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    z-index: -1;
+    animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(50px, 50px); }
+}
+
+/* 自定義滑鼠光標 */
+.cursor {
+    position: fixed;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: rgba(0, 212, 255, 0.8);
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: screen;
+    box-shadow: 
+        0 0 20px 5px rgba(0, 212, 255, 0.5),
+        0 0 40px 10px rgba(0, 102, 255, 0.3);
+    transition: width var(--animation-speed), height var(--animation-speed), background-color var(--animation-speed);
+}
+
+.cursor-follower {
+    position: fixed;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: rgba(0, 102, 255, 0.15);
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.15s ease-out, width 0.4s, height 0.4s, background-color 0.4s;
+    box-shadow: 0 0 40px 10px rgba(0, 212, 255, 0.15);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+/* 光影效果層 */
+.light-effect {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+        circle at var(--x, 50%) var(--y, 50%), 
+        rgba(0, 212, 255, 0.12) 0%, 
+        rgba(0, 102, 255, 0.05) 25%, 
+        rgba(0, 0, 0, 0) 50%
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 主容器 */
+.form-container {
+    text-align: center;
+    background: var(--bg-card);
+    padding: 40px 35px;
+    border-radius: 20px;
+    box-shadow: 
+        0 0 40px rgba(0, 0, 0, 0.5),
+        0 0 80px rgba(0, 102, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    width: 90%;
+    max-width: 420px;
+    z-index: 10;
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+}
+
+/* 容器發光邊框動畫 */
+.form-container::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+        var(--primary-color), 
+        var(--secondary-color), 
+        var(--accent-color), 
+        var(--primary-color));
+    background-size: 400% 400%;
+    z-index: -1;
+    border-radius: 22px;
+    filter: blur(15px);
+    opacity: 0.4;
+    animation: glowingBorder 8s linear infinite;
+}
+
+/* 掃描線效果 */
+.form-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        var(--primary-color), 
+        transparent);
+    animation: scanLine 3s ease-in-out infinite;
+    opacity: 0.6;
+}
+
+@keyframes scanLine {
+    0%, 100% { top: 0; opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { top: 100%; opacity: 0; }
+}
+
+.form-container > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* 標題 */
+h2 {
+    margin-bottom: 30px;
+    color: var(--text-primary);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 
+        0 0 20px rgba(0, 212, 255, 0.5),
+        0 0 40px rgba(0, 102, 255, 0.3);
+}
+
+.title-text {
+    background: linear-gradient(135deg, var(--primary-light), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Logo 圖示區域 */
+.logo-container {
+    margin-bottom: 25px;
+}
+
+.logo-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon::before {
+    content: '⚡';
+    font-size: 40px;
+    filter: drop-shadow(0 0 10px var(--primary-color));
+}
+
+.logo-icon::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: logoPulse 2s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* 表單標籤 */
+.form-label {
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* 輸入框和選擇框 */
+input, select {
+    width: 100%;
+    padding: 14px 18px;
+    margin: 5px 0 15px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 16px;
+    font-family: 'Space Mono', monospace;
+    transition: all var(--animation-speed) ease;
+}
+
+input::placeholder, select::placeholder {
+    color: var(--text-muted);
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 
+        0 0 0 3px rgba(0, 212, 255, 0.15),
+        0 0 20px rgba(0, 212, 255, 0.2),
+        inset 0 0 10px rgba(0, 212, 255, 0.05);
+    background-color: rgba(10, 20, 35, 0.95);
+}
+
+input:hover, select:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300d4ff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    padding-right: 40px;
+}
+
+select option {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    padding: 10px;
+}
+
+/* 提示文字 */
+.note-text {
+    margin: 20px 0;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 400;
+    padding: 12px;
+    background: rgba(0, 212, 255, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary-color);
+}
+
+/* 懸停效果 */
+.hover-effect {
+    transition: all var(--animation-speed) ease;
+}
+
+.hover-effect:hover {
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+/* 主按鈕 */
+.btn-epic {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 56px;
+    margin: 30px auto 15px;
+    background: linear-gradient(135deg, 
+        rgba(0, 102, 255, 0.3) 0%, 
+        rgba(0, 212, 255, 0.2) 100%);
+    color: var(--text-primary);
+    border: 1px solid var(--primary-color);
+    border-radius: 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all var(--animation-speed) ease;
+    box-shadow: 
+        0 4px 20px rgba(0, 102, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
+.btn-epic:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 按鈕發光效果 */
+.btn-epic::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent,
+        rgba(0, 212, 255, 0.1),
+        transparent
+    );
+    transform: rotate(45deg);
+    animation: btnShine 3s ease-in-out infinite;
+}
+
+@keyframes btnShine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.btn-epic:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 
+        0 8px 30px rgba(0, 212, 255, 0.4),
+        0 0 50px rgba(0, 102, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    background: linear-gradient(135deg, 
+        rgba(0, 102, 255, 0.4) 0%, 
+        rgba(0, 212, 255, 0.3) 100%);
+    border-color: var(--primary-light);
+}
+
+.btn-epic:active:not(:disabled) {
+    transform: scale(0.98) translateY(0);
+    box-shadow: 
+        0 2px 15px rgba(0, 212, 255, 0.3),
+        inset 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* 成功訊息 */
+.success-message {
+    background: linear-gradient(135deg, 
+        rgba(0, 255, 136, 0.1) 0%, 
+        rgba(0, 255, 204, 0.05) 100%);
+    padding: 25px;
+    border-radius: 12px;
+    margin: 20px 0;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+}
+
+.success-message .status-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+/* 錯誤訊息 */
+.error-message {
+    background: linear-gradient(135deg, 
+        rgba(255, 68, 102, 0.1) 0%, 
+        rgba(255, 100, 100, 0.05) 100%);
+    padding: 25px;
+    border-radius: 12px;
+    margin: 20px 0;
+    border: 1px solid rgba(255, 68, 102, 0.3);
+    box-shadow: 0 0 30px rgba(255, 68, 102, 0.1);
+}
+
+/* 資訊行 */
+.info-row {
+    margin: 12px 0;
+    text-align: left;
+    padding: 10px 15px;
+    background: rgba(0, 212, 255, 0.05);
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-row strong {
+    color: var(--primary-light);
+}
+
+/* 輸入框光暈效果 */
+.input-glow {
+    position: relative;
+}
+
+.input-glow::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+    transition: box-shadow var(--animation-speed) ease;
+    pointer-events: none;
+}
+
+.input-glow:focus-within::after {
+    box-shadow: 0 0 20px 3px rgba(0, 212, 255, 0.3);
+}
+
+/* 粒子效果 */
+.particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.particle {
+    position: absolute;
+    background: var(--primary-color);
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(1px);
+    box-shadow: 0 0 6px var(--primary-color);
+}
+
+/* 動畫 */
+@keyframes glowingBorder {
+    0% { background-position: 0 0; }
+    50% { background-position: 400% 0; }
+    100% { background-position: 0 0; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* 金額快選按鈕 */
+.amount-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 10px 0 15px;
+}
+
+.preset-btn {
+    padding: 10px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--animation-speed) ease;
+}
+
+.preset-btn:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+}
+
+.preset-btn.active {
+    background: rgba(0, 212, 255, 0.3);
+    border-color: var(--primary-color);
+    color: var(--primary-light);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+}
+
+/* 付款方式圖示 */
+.payment-method-icon {
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+/* 倒數計時 */
+.countdown {
+    margin-top: 15px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.countdown span {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* 響應式設計 */
+@media screen and (max-width: 600px) {
+    body {
+        padding: 15px;
+    }
+    
+    .form-container {
+        width: 100%;
+        padding: 30px 20px;
+    }
+    
+    h2 {
+        font-size: 1.2rem;
+    }
+    
+    .amount-presets {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .cursor, .cursor-follower {
+        display: none;
+    }
+    
+    body {
+        cursor: auto;
+    }
+    
+    body::after {
+        background-size: 30px 30px;
+    }
+}
+
+/* 隱藏表單 */
+.hidden-form {
+    display: none !important;
+}
+
+/* 載入動畫 */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0, 212, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ATM 資訊頁面專用樣式 */
+.atm-info-container {
+    max-width: 550px;
+    margin: 30px auto;
+    padding: 35px;
+    background: var(--bg-card);
+    border-radius: 20px;
+    box-shadow: 
+        0 0 40px rgba(0, 0, 0, 0.5),
+        0 0 80px rgba(0, 102, 255, 0.1);
+    text-align: center;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.atm-info-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    animation: atmScan 2s ease-in-out infinite;
+}
+
+@keyframes atmScan {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.atm-title {
+    color: var(--text-primary);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    margin-bottom: 25px;
+    font-weight: 600;
+    letter-spacing: 2px;
+}
+
+.atm-info {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 25px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.atm-info h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 16px;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 1px;
+}
+
+.atm-info .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.atm-info .info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.info-value {
+    color: var(--primary-light);
+    font-weight: 600;
+    font-family: 'Space Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.info-value:hover {
+    color: var(--accent-color);
+    text-shadow: 0 0 10px var(--accent-glow);
+}
+
+.important-note {
+    background: linear-gradient(135deg, 
+        rgba(255, 170, 0, 0.1) 0%, 
+        rgba(255, 200, 0, 0.05) 100%);
+    border: 1px solid rgba(255, 170, 0, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 25px 0;
+    color: var(--warning-color);
+    text-align: left;
+}
+
+.important-note ul {
+    margin: 12px 0;
+    padding-left: 20px;
+}
+
+.important-note li {
+    margin: 8px 0;
+    color: var(--text-secondary);
+}
+
+.back-button {
+    background: linear-gradient(135deg, 
+        rgba(0, 102, 255, 0.3) 0%, 
+        rgba(0, 212, 255, 0.2) 100%);
+    color: var(--text-primary);
+    border: 1px solid var(--primary-color);
+    padding: 14px 35px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 20px;
+    transition: all var(--animation-speed) ease;
+}
+
+.back-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+    background: linear-gradient(135deg, 
+        rgba(0, 102, 255, 0.4) 0%, 
+        rgba(0, 212, 255, 0.3) 100%);
+}
+
+/* 後台管理專用樣式 */
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 24px;
+    color: var(--text-primary);
+    letter-spacing: 2px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 32px;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.data-table th,
+.data-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-table th {
+    background: rgba(0, 212, 255, 0.1);
+    color: var(--primary-color);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.data-table tr:hover {
+    background: rgba(0, 212, 255, 0.05);
+}
+
+.status-success {
+    color: var(--success-color);
+}
+
+.status-pending {
+    color: var(--warning-color);
+}
+
+.status-failed {
+    color: var(--error-color);
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--success-color);
+}
+
+.badge-pending {
+    background: rgba(255, 170, 0, 0.2);
+    color: var(--warning-color);
+}
+
+.badge-failed {
+    background: rgba(255, 68, 102, 0.2);
+    color: var(--error-color);
+}
+
+/* 滾動條樣式 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-darker);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}

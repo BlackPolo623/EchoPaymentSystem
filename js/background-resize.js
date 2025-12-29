@@ -1,7 +1,12 @@
+// ============================================
+// Echo Payment System - Background Resize
+// 背景尺寸自動調整
+// ============================================
+
 function adjustBackgroundSize() {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const ratio = 1920 / 970; // 原图比例
+    const ratio = 1920 / 970; // 原圖比例
     
     let bgWidth, bgHeight;
     

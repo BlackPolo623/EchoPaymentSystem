@@ -1,3 +1,8 @@
+// ============================================
+// Echo Payment System - Visual Effects
+// 滑鼠跟隨光標、粒子效果、表單增強
+// ============================================
+
 // 創建滑鼠跟隨光標
 function createCursor() {
     const cursor = document.createElement('div');
@@ -31,17 +36,20 @@ function createCursor() {
         if (hoveredElement && (hoveredElement.tagName === 'INPUT' || 
                               hoveredElement.tagName === 'SELECT' || 
                               hoveredElement.tagName === 'BUTTON' ||
-                              hoveredElement.classList.contains('btn-epic'))) {
+                              hoveredElement.classList.contains('btn-epic') ||
+                              hoveredElement.classList.contains('preset-btn'))) {
             cursor.style.width = '30px';
             cursor.style.height = '30px';
-            cursor.style.backgroundColor = 'rgba(58, 210, 208, 0.4)';
+            cursor.style.backgroundColor = 'rgba(0, 212, 255, 0.4)';
+            cursor.style.boxShadow = '0 0 30px 8px rgba(0, 212, 255, 0.6), 0 0 60px 15px rgba(0, 102, 255, 0.4)';
             
             follower.style.width = '80px';
             follower.style.height = '80px';
         } else {
             cursor.style.width = '20px';
             cursor.style.height = '20px';
-            cursor.style.backgroundColor = 'rgba(58, 210, 208, 0.7)';
+            cursor.style.backgroundColor = 'rgba(0, 212, 255, 0.8)';
+            cursor.style.boxShadow = '0 0 20px 5px rgba(0, 212, 255, 0.5), 0 0 40px 10px rgba(0, 102, 255, 0.3)';
             
             follower.style.width = '60px';
             follower.style.height = '60px';
@@ -52,6 +60,9 @@ function createCursor() {
     document.addEventListener('mousedown', () => {
         cursor.style.transform = 'translate(-50%, -50%) scale(0.7)';
         follower.style.transform = 'translate(-50%, -50%) scale(0.7)';
+        
+        // 創建點擊波紋效果
+        createRipple(mouseX, mouseY);
     });
     
     document.addEventListener('mouseup', () => {
@@ -76,6 +87,45 @@ function createCursor() {
     updateCursorPosition();
 }
 
+// 創建點擊波紋效果
+function createRipple(x, y) {
+    const ripple = document.createElement('div');
+    ripple.style.cssText = `
+        position: fixed;
+        left: ${x}px;
+        top: ${y}px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 212, 255, 0.8);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 9997;
+        animation: rippleExpand 0.6s ease-out forwards;
+    `;
+    document.body.appendChild(ripple);
+    
+    setTimeout(() => ripple.remove(), 600);
+}
+
+// 添加波紋動畫
+const rippleStyle = document.createElement('style');
+rippleStyle.textContent = `
+    @keyframes rippleExpand {
+        0% {
+            width: 20px;
+            height: 20px;
+            opacity: 1;
+        }
+        100% {
+            width: 100px;
+            height: 100px;
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(rippleStyle);
+
 // 創建粒子效果
 function createParticles() {
     const particlesContainer = document.createElement('div');
@@ -83,7 +133,7 @@ function createParticles() {
     document.body.appendChild(particlesContainer);
     
     // 創建粒子
-    const particlesCount = 30;
+    const particlesCount = 40;
     const particles = [];
     
     for (let i = 0; i < particlesCount; i++) {
@@ -95,6 +145,11 @@ function createParticles() {
         particle.style.width = size + 'px';
         particle.style.height = size + 'px';
         particle.style.opacity = Math.random() * 0.5 + 0.1;
+        
+        // 隨機顏色（藍色系）
+        const hue = 190 + Math.random() * 30; // 藍色到青色
+        particle.style.background = `hsl(${hue}, 100%, 60%)`;
+        particle.style.boxShadow = `0 0 ${size * 2}px hsl(${hue}, 100%, 60%)`;
         
         // 初始位置
         const x = Math.random() * window.innerWidth;
@@ -111,7 +166,8 @@ function createParticles() {
             x,
             y,
             speedX,
-            speedY
+            speedY,
+            size
         });
         
         particlesContainer.appendChild(particle);
@@ -145,6 +201,9 @@ function createParticles() {
 function enhanceFormElements() {
     const inputs = document.querySelectorAll('input, select');
     inputs.forEach(input => {
+        // 檢查是否已經有包裝器
+        if (input.parentNode.classList.contains('input-glow')) return;
+        
         const wrapper = document.createElement('div');
         wrapper.classList.add('input-glow');
         input.parentNode.insertBefore(wrapper, input);
@@ -167,9 +226,80 @@ function enhanceFormElements() {
     });
 }
 
+// 創建科技感裝飾線條
+function createDecoLines() {
+    const container = document.querySelector('.form-container');
+    if (!container) return;
+    
+    // 創建角落裝飾
+    const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+    corners.forEach(corner => {
+        const deco = document.createElement('div');
+        deco.className = `corner-deco ${corner}`;
+        deco.style.cssText = `
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: rgba(0, 212, 255, 0.5);
+            border-style: solid;
+            border-width: 0;
+            pointer-events: none;
+        `;
+        
+        switch(corner) {
+            case 'top-left':
+                deco.style.top = '10px';
+                deco.style.left = '10px';
+                deco.style.borderTopWidth = '2px';
+                deco.style.borderLeftWidth = '2px';
+                break;
+            case 'top-right':
+                deco.style.top = '10px';
+                deco.style.right = '10px';
+                deco.style.borderTopWidth = '2px';
+                deco.style.borderRightWidth = '2px';
+                break;
+            case 'bottom-left':
+                deco.style.bottom = '10px';
+                deco.style.left = '10px';
+                deco.style.borderBottomWidth = '2px';
+                deco.style.borderLeftWidth = '2px';
+                break;
+            case 'bottom-right':
+                deco.style.bottom = '10px';
+                deco.style.right = '10px';
+                deco.style.borderBottomWidth = '2px';
+                deco.style.borderRightWidth = '2px';
+                break;
+        }
+        
+        container.appendChild(deco);
+    });
+}
+
 // 頁面載入時初始化所有效果
 document.addEventListener('DOMContentLoaded', () => {
-    createCursor();
+    // 檢測是否為移動設備
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (!isMobile) {
+        createCursor();
+    }
+    
     createParticles();
     enhanceFormElements();
+    createDecoLines();
+});
+
+// 視窗大小改變時重新創建粒子
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        const existingParticles = document.querySelector('.particles');
+        if (existingParticles) {
+            existingParticles.remove();
+            createParticles();
+        }
+    }, 300);
 });
