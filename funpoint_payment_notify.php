@@ -8,13 +8,13 @@
 // 設置錯誤日誌
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
-ini_set('error_log', __DIR__ . '/../data/payment_errors.log');
 
 // 確保資料目錄存在
 $dataDir = __DIR__ . '/data';
 if (!is_dir($dataDir)) {
     mkdir($dataDir, 0755, true);
 }
+ini_set('error_log', $dataDir . '/payment_errors.log');
 
 // 載入配置
 $config = [
@@ -43,7 +43,6 @@ if (!isset($receivedData['CheckMacValue'])) {
 $receivedCheckMacValue = $receivedData['CheckMacValue'];
 
 // 判斷付款方式
-// 判斷付款方式 - 根據 PaymentType 欄位
 $paymentTypeRaw = $receivedData['PaymentType'] ?? '';
 
 if (strpos($paymentTypeRaw, 'ATM') !== false) {
@@ -57,14 +56,8 @@ if (strpos($paymentTypeRaw, 'ATM') !== false) {
 }
 logTransaction($transactionId, 'INFO', "Detected payment type: {$paymentType}");
 
-$isATM = ($paymentType === 'ATM');
-
-// 計算檢查碼
-if ($isATM) {
-    $calculatedCheckMacValue = calculateATMCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
-} else {
-    $calculatedCheckMacValue = calculateCreditCheckMacValue($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
-}
+// ⭐ 修正：付款完成通知都用返回的參數計算
+$calculatedCheckMacValue = calculateCheckMacValueFromReceived($receivedData, $config['funpoint']['HashKey'], $config['funpoint']['HashIV'], $transactionId);
 
 logTransaction($transactionId, 'DEBUG', "CheckMacValue comparison - Received: {$receivedCheckMacValue}, Calculated: {$calculatedCheckMacValue}");
 
@@ -114,14 +107,14 @@ try {
         'createdAt' => date('Y-m-d H:i:s'),
         'rawData' => $receivedData
     ];
-    
+
     // 讀取現有交易記錄
     $transactions = [];
     if (file_exists($config['dataFile'])) {
         $content = file_get_contents($config['dataFile']);
         $transactions = json_decode($content, true) ?: [];
     }
-    
+
     // 檢查是否重複交易
     $isDuplicate = false;
     foreach ($transactions as $t) {
@@ -130,7 +123,7 @@ try {
             break;
         }
     }
-    
+
     if (!$isDuplicate) {
         // 添加新交易
         array_unshift($transactions, $transaction);
@@ -162,7 +155,7 @@ try {
     } else {
         logTransaction($transactionId, 'INFO', "Duplicate transaction: {$merchantTradeNo}");
     }
-    
+
 } catch (Exception $e) {
     logTransaction($transactionId, 'ERROR', "Failed to save transaction: " . $e->getMessage());
     echo '0|Save error';
@@ -173,38 +166,13 @@ try {
 echo '1|OK';
 
 /**
- * ATM 檢查碼計算
+ * ⭐ 用返回的參數計算 CheckMacValue（適用於所有付款完成通知）
  */
-function calculateATMCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
-    $sentParams = [
-        'MerchantID' => $receivedData['MerchantID'] ?? '',
-        'MerchantTradeNo' => $receivedData['MerchantTradeNo'] ?? '',
-        'MerchantTradeDate' => $receivedData['MerchantTradeDate'] ?? '',
-        'PaymentType' => 'aio',
-        'TotalAmount' => $receivedData['TradeAmt'] ?? '',
-        'TradeDesc' => 'Echo Payment Service',
-        'ItemName' => 'Echo Payment Service',
-        'ReturnURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/funpoint_payment_notify.php',
-        'ChoosePayment' => 'ATM',
-        'ClientBackURL' => 'https://bachuan-3cdbb7d0b6e7.herokuapp.com/index.html',
-        'EncryptType' => '1',
-        'CustomField1' => $receivedData['CustomField1'] ?? '',
-        'ExpireDate' => '3'
-    ];
-
-    logTransaction($transactionId, 'DEBUG', "ATM sent parameters reconstructed: " . json_encode($sentParams, JSON_UNESCAPED_UNICODE));
-
-    return calculateOfficialCheckMacValue($sentParams, $hashKey, $hashIV, $transactionId);
-}
-
-/**
- * 信用卡檢查碼計算
- */
-function calculateCreditCheckMacValue($receivedData, $hashKey, $hashIV, $transactionId) {
+function calculateCheckMacValueFromReceived($receivedData, $hashKey, $hashIV, $transactionId) {
     $params = $receivedData;
     unset($params['CheckMacValue']);
 
-    logTransaction($transactionId, 'DEBUG', "Credit parameters count: " . count($params));
+    logTransaction($transactionId, 'DEBUG', "Parameters for CheckMac calculation: " . json_encode($params, JSON_UNESCAPED_UNICODE));
 
     return calculateOfficialCheckMacValue($params, $hashKey, $hashIV, $transactionId);
 }
