@@ -1,4 +1,236 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PropertiesComponent">{}</component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b43aad61-d185-4d7f-b6ea-5204346bf5e2" name="更改" comment="隱藏data資料夾">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;BlackPolo623&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/BlackPolo623/EchoPaymentSystem.git&quot;,
+    &quot;accountId&quot;: &quot;58d770bf-fcc5-4131-a7b1-ca826665e3a5&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="37W0U6hQA1iRzL4xmyzjzvouipC" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/htdocs/EchoEsportPay&quot;
+  }
+}</component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="b43aad61-d185-4d7f-b6ea-5204346bf5e2" name="更改" comment="" />
+      <created>1767003533033</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1767003533033</updated>
+    </task>
+    <task id="LOCAL-00001" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767004293596</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1767004293596</updated>
+    </task>
+    <task id="LOCAL-00002" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767004563004</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1767004563004</updated>
+    </task>
+    <task id="LOCAL-00003" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767005061765</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1767005061765</updated>
+    </task>
+    <task id="LOCAL-00004" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767005201204</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1767005201204</updated>
+    </task>
+    <task id="LOCAL-00005" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767005516954</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1767005516954</updated>
+    </task>
+    <task id="LOCAL-00006" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767015647877</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1767015647877</updated>
+    </task>
+    <task id="LOCAL-00007" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767016138413</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1767016138413</updated>
+    </task>
+    <task id="LOCAL-00008" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767016507774</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1767016507774</updated>
+    </task>
+    <task id="LOCAL-00009" summary="更改生成唯一ID">
+      <option name="closed" value="true" />
+      <created>1767017229550</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1767017229550</updated>
+    </task>
+    <task id="LOCAL-00010" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767018009716</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1767018009716</updated>
+    </task>
+    <task id="LOCAL-00011" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767019561759</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1767019561759</updated>
+    </task>
+    <task id="LOCAL-00012" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767020311261</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1767020311261</updated>
+    </task>
+    <task id="LOCAL-00013" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767020495360</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1767020495360</updated>
+    </task>
+    <task id="LOCAL-00014" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767020748874</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1767020748874</updated>
+    </task>
+    <task id="LOCAL-00015" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767021416605</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1767021416605</updated>
+    </task>
+    <task id="LOCAL-00016" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767022056728</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1767022056728</updated>
+    </task>
+    <task id="LOCAL-00017" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767022947766</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1767022947766</updated>
+    </task>
+    <task id="LOCAL-00018" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767023205086</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1767023205086</updated>
+    </task>
+    <task id="LOCAL-00019" summary="更新後台">
+      <option name="closed" value="true" />
+      <created>1767023634729</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1767023634729</updated>
+    </task>
+    <task id="LOCAL-00020" summary="隱藏data資料夾">
+      <option name="closed" value="true" />
+      <created>1767023700353</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1767023700353</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="更改生成唯一ID" />
+    <MESSAGE value="更新後台" />
+    <MESSAGE value="隱藏data資料夾" />
+    <option name="LAST_COMMIT_MESSAGE" value="隱藏data資料夾" />
+  </component>
 </project>
