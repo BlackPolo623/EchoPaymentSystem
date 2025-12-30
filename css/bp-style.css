@@ -9,22 +9,22 @@
     --bg-primary: #0a0a0a;
     --bg-secondary: #1a0f0f;
     --bg-card: #1f1515;
-
+    
     /* 紅色系 */
     --red-primary: #ff0000;
     --red-secondary: #cc0000;
     --red-dark: #8b0000;
     --red-glow: rgba(255, 0, 0, 0.6);
-
+    
     /* 文字顏色 */
     --text-primary: #ffffff;
     --text-secondary: #cccccc;
     --text-muted: #666666;
-
+    
     /* 邊框 */
     --border-color: #ff0000;
     --border-dark: #8b0000;
-
+    
     /* 陰影 */
     --shadow-red: 0 0 20px rgba(255, 0, 0, 0.5);
     --shadow-red-strong: 0 0 30px rgba(255, 0, 0, 0.8);
@@ -150,11 +150,11 @@ h2 {
 }
 
 @keyframes textGlow {
-    0%, 100% {
+    0%, 100% { 
         text-shadow: 0 0 10px var(--red-primary),
                      0 0 20px var(--red-primary);
     }
-    50% {
+    50% { 
         text-shadow: 0 0 20px var(--red-primary),
                      0 0 30px var(--red-primary),
                      0 0 40px var(--red-primary);
@@ -347,15 +347,15 @@ input.invalid {
     .form-container {
         padding: 25px;
     }
-
+    
     h2 {
         font-size: 22px;
     }
-
+    
     .amount-presets {
         grid-template-columns: repeat(2, 1fr);
     }
-
+    
     .btn-epic {
         font-size: 16px;
         padding: 15px;
@@ -413,7 +413,7 @@ input.invalid {
 /* ========== 復古 CRT 螢幕效果 ========== */
 @media (min-width: 768px) {
     body {
-        background:
+        background: 
             radial-gradient(ellipse at center, var(--bg-primary) 0%, #000000 100%);
     }
 }

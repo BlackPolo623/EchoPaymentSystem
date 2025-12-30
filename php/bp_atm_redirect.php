@@ -65,156 +65,10 @@ $isSuccess = ($rtnCode === '2');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ATM 虛擬帳號 - BP Payment</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/bp-style.css">
+    <link rel="stylesheet" href="../css/bp-result.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <style>
-        body {
-            cursor: auto !important;
-        }
-        body::before, body::after {
-            opacity: 0.2;
-        }
-        .atm-container {
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 40px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.1);
-        }
-        .atm-title {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 28px;
-            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
-        }
-        .success-icon {
-            text-align: center;
-            font-size: 64px;
-            margin-bottom: 20px;
-            animation: bounceIn 0.6s ease;
-        }
-        .atm-info {
-            background: rgba(0, 212, 255, 0.05);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 25px 0;
-        }
-        .atm-info h3 {
-            color: var(--success-color);
-            margin-bottom: 25px;
-            font-size: 18px;
-            text-align: center;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .info-row:last-child {
-            border-bottom: none;
-        }
-        .info-label {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-        .info-value {
-            color: var(--text-primary);
-            font-family: 'Space Mono', monospace;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .copyable {
-            cursor: pointer;
-            padding: 8px 12px;
-            background: rgba(0, 212, 255, 0.1);
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        .copyable:hover {
-            background: rgba(0, 212, 255, 0.2);
-            transform: translateY(-2px);
-        }
-        .important-note {
-            background: rgba(255, 170, 0, 0.1);
-            border: 1px solid var(--warning-color);
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 25px;
-            color: var(--text-secondary);
-        }
-        .important-note strong {
-            color: var(--warning-color);
-            display: block;
-            margin-bottom: 10px;
-        }
-        .important-note ul {
-            margin: 10px 0 0 20px;
-            padding: 0;
-        }
-        .important-note li {
-            margin: 8px 0;
-            line-height: 1.6;
-        }
-        .back-button {
-            display: inline-block;
-            width: 100%;
-            padding: 15px;
-            margin-top: 25px;
-            background: linear-gradient(135deg, rgba(0, 102, 255, 0.3), rgba(0, 212, 255, 0.2));
-            border: 1px solid var(--primary-color);
-            border-radius: 10px;
-            color: var(--text-primary);
-            text-align: center;
-            text-decoration: none;
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-        .back-button:hover {
-            background: linear-gradient(135deg, rgba(0, 102, 255, 0.4), rgba(0, 212, 255, 0.3));
-            transform: translateY(-2px);
-        }
-        .copy-success {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, rgba(0, 255, 136, 0.95), rgba(0, 200, 100, 0.95));
-            color: white;
-            padding: 12px 25px;
-            border-radius: 10px;
-            z-index: 10000;
-            font-family: 'Rajdhani', sans-serif;
-            display: none;
-            animation: fadeIn 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.4);
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        @keyframes bounceIn {
-            0% { transform: scale(0); opacity: 0; }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .error-container {
-            text-align: center;
-            color: var(--error-color);
-        }
-        .error-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 <body>
     <div id="copySuccess" class="copy-success">✓ 已複製到剪貼簿</div>
@@ -324,6 +178,5 @@ $isSuccess = ($rtnCode === '2');
             }, 2000);
         }
     </script>
-    <script src="../js/background-resize.js"></script>
 </body>
 </html>

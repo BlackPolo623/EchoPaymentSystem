@@ -61,51 +61,10 @@ $paymentType = $receivedData['PaymentType'] ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>付款結果 - BP Payment</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/bp-style.css">
+    <link rel="stylesheet" href="../css/bp-result.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <style>
-        body {
-            cursor: auto !important;
-        }
-        .result-container {
-            text-align: center;
-            max-width: 500px;
-        }
-        .status-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            animation: bounceIn 0.6s ease;
-        }
-        @keyframes bounceIn {
-            0% { transform: scale(0); opacity: 0; }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .result-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            margin-bottom: 25px;
-            letter-spacing: 2px;
-        }
-        .success .result-title {
-            color: var(--success-color);
-            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
-        }
-        .error .result-title {
-            color: var(--error-color);
-            text-shadow: 0 0 20px rgba(255, 68, 102, 0.5);
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .info-row:last-child {
-            border-bottom: none;
-        }
-    </style>
 </head>
 <body>
 <div class="form-container result-container <?php echo $isSuccess ? 'success' : 'error'; ?>">
@@ -183,6 +142,5 @@ function updateCounter() {
 setTimeout(updateCounter, 1000);
 <?php endif; ?>
 </script>
-<script src="../js/background-resize.js"></script>
 </body>
 </html>
