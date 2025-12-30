@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="BP 收款系統 - 快速安全的線上收款服務">
+    <title>BP Payment System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 預載入字體 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- CryptoJS for CheckMacValue -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha512-E8QSvWZ0eCLGk4km3hxSsNmGWbLtSCSUcewDQPQWZF6pEU8GlT8a5fF32wOl1i8ftdMhssTrF/OhyGWwonTcXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+<div class="form-container">
+    <!-- Logo 區域 -->
+    <div class="logo-container">
+        <img src="image/Logo.png" alt="BP Logo" style="max-width: 150px; height: auto;">
+    </div>
+
+    <h2><span class="title-text">BP 收款系統</span></h2>
+
+    <!-- 金額輸入 -->
+    <label for="amount" class="form-label">付款金額</label>
+    <input type="number" id="amount" placeholder="請輸入金額" min="100" value="100" step="100"/>
+
+    <!-- 金額快選按鈕 -->
+    <div class="amount-presets">
+        <button type="button" class="preset-btn" data-amount="100">$100</button>
+        <button type="button" class="preset-btn" data-amount="300">$300</button>
+        <button type="button" class="preset-btn" data-amount="500">$500</button>
+        <button type="button" class="preset-btn" data-amount="1000">$1000</button>
+    </div>
+
+    <!-- 付款方式選擇 -->
+    <label for="pay_zg" class="form-label">付款方式</label>
+    <select id="pay_zg">
+        <option value="credit">💳 信用卡支付</option>
+        <option value="ATM">🏧 虛擬帳號轉帳</option>
+        <option value="4">🏪 7-11 ibon</option>
+        <option value="6">🏪 全家 FamiPort</option>
+    </select>
+
+    <p class="note-text">💡 最低付款金額：NT$100</p>
+
+    <button class="btn-epic" id="submit-btn">確認付款</button>
+</div>
+
+<!-- 隱藏表單 - 信用卡付款 -->
+<form id="funpoint-payment-form" method="POST" action="" class="hidden-form">
+    <input type="hidden" name="MerchantID" value="">
+    <input type="hidden" name="MerchantTradeNo" value="">
+    <input type="hidden" name="MerchantTradeDate" value="">
+    <input type="hidden" name="PaymentType" value="aio">
+    <input type="hidden" name="TotalAmount" value="">
+    <input type="hidden" name="TradeDesc" value="">
+    <input type="hidden" name="ItemName" value="">
+    <input type="hidden" name="ReturnURL" value="">
+    <input type="hidden" name="ChoosePayment" value="Credit">
+    <input type="hidden" name="ClientBackURL" value="">
+    <input type="hidden" name="OrderResultURL" value="">
+    <input type="hidden" name="EncryptType" value="1">
+    <input type="hidden" name="CustomField1" value="">
+    <input type="hidden" name="CheckMacValue" value="">
+</form>
+
+<!-- 隱藏表單 - ATM付款 -->
+<form id="funpoint-ATMpayment-form" method="POST" action="" class="hidden-form">
+    <input type="hidden" name="MerchantID" value="">
+    <input type="hidden" name="MerchantTradeNo" value="">
+    <input type="hidden" name="MerchantTradeDate" value="">
+    <input type="hidden" name="PaymentType" value="aio">
+    <input type="hidden" name="TotalAmount" value="">
+    <input type="hidden" name="TradeDesc" value="">
+    <input type="hidden" name="ItemName" value="">
+    <input type="hidden" name="ReturnURL" value="">
+    <input type="hidden" name="ChoosePayment" value="ATM">
+    <input type="hidden" name="PaymentInfoURL" value="">
+    <input type="hidden" name="ClientRedirectURL" value="">
+    <input type="hidden" name="EncryptType" value="1">
+    <input type="hidden" name="ExpireDate" value="">
+    <input type="hidden" name="CustomField1" value="">
+    <input type="hidden" name="CheckMacValue" value="">
+</form>
+
+<!-- 腳本 -->
+<script src="js/script-bp.js"></script>
+<script src="js/background-resize.js"></script>
+<script src="js/htmlcss.js"></script>
+</body>
+</html>
